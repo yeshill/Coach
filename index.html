@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dobby | Sanal Eğitim Koçun</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f8fafc; margin: 0; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(71, 85, 105, 0.3); }
+        .dobby-glow { box-shadow: 0 0 20px rgba(234, 179, 8, 0.2); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // --- KRİTİK: API ANAHTARINIZI BURAYA YAZIN ---
+        const API_KEY = "BURAYA_API_KEY_GELECEK"; 
+
+        function App() {
+            // Durum Yönetimi
+            const [step, setStep] = useState(0);
+            const [hasHomework, setHasHomework] = useState(null);
+            const [hwDuration, setHwDuration] = useState('');
+            const [workRhythm, setWorkRhythm] = useState(40);
+            const [startTime, setStartTime] = useState('');
+            const [scheduleData, setScheduleData] = useState(null);
+            const [messages, setMessages] = useState([{ role: 'model', text: 'Miyav! Planımız hazır. Çalışırken buralardayım, bir şeye ihtiyacın olursa patile beni!' }]);
+            const [chatInput, setChatInput] = useState('');
+            const [isChatLoading, setIsChatLoading] = useState(false);
+            const messagesEndRef = useRef(null);
+
+            // Dobby'nin Öğretici Mesajları
+            const onboardingSteps = [
+                { msg: "Miyav! Selam, ben Dobby. Senin yeni koçunum. Siyah tüylerime bakma, içim çok aydınlıktır! Kuralımız net: Günde en az 3 saat (180 dakika) çalışacağız. Hazırsan başlayalım mı?", btn: "Hazırım Dobby!" },
+                { msg: "Bugün okulda neler oldu? Ödevin var mı bakalım? (Yoksa sevinme, o süreyi testle dolduracağız!)", options: true },
+                { msg: "Peki bu ödevler tahminen kaç dakikanı alır? Dürüst ol, kedileri kandıramazsın...", input: "number" },
+                { msg: "Çalışma tarzın nasıl? 40 dakika odaklanıp 10 dakika mola mı, yoksa 50 dakika maraton mu?", rhythm: true },
+                { msg: "Kalemleri ve defterleri hazırladıysan söyle bakalım, bu yolculuğa saat kaçta başlıyoruz?", input: "time" }
+            ];
+
+            const handleNext = () => {
+                if (step === 1 && hasHomework === false) { setStep(3); setHwDuration(0); }
+                else if (step === 4) {
+                    if (!startTime) return alert("Saat girmeden başlayamam miyav!");
+                    setScheduleData({ hwDuration: Number(hwDuration) || 0, workRhythm, startTime });
+                } else { setStep(step + 1); }
+            };
+
+            // 180 Dakika Hesaplama Motoru
+            const schedule = useMemo(() => {
+                if (!scheduleData) return [];
+                const TOTAL_MIN = 180;
+                let { hwDuration, workRhythm, startTime } = scheduleData;
+                let remainingWork = TOTAL_MIN;
+                let currentHw = hwDuration;
+                let [h, m] = startTime.split(':').map(Number);
+                let currentTime = h * 60 + m;
+
+                const format = (mins) => `${String(Math.floor(mins / 60) % 24).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+                const plan = []; let count = 1;
+
+                while (remainingWork > 0) {
+                    let duration = Math.min(workRhythm, remainingWork);
+                    let title = currentHw > 0 ? "Ödev Zamanı 📚" : "Konu Tekrarı & Test 🎯";
+                    
+                    plan.push({ type: 'work', title: `${count}. Oturum: ${title}`, time: `${format(currentTime)} - ${format(currentTime + duration)}`, duration });
+                    
+                    currentTime += duration; remainingWork -= duration; if (currentHw > 0) currentHw -= duration;
+                    if (remainingWork > 0) {
+                        plan.push({ type: 'break', title: "Mola (Dobby'yi sev!) 🐈‍⬛", time: `${format(currentTime)} - ${format(currentTime + 10)}`, duration: 10 });
+                        currentTime += 10;
+                    }
+                    count++;
+                }
+                return plan;
+            }, [scheduleData]);
+
+            // Gemini Chat Entegrasyonu (Dobby Kimliğiyle)
+            const askDobby = async (e) => {
+                e.preventDefault();
+                if (!chatInput.trim()) return;
+                const userMsg = chatInput;
+                setMessages(p => [...p, { role: 'user', text: userMsg }]);
+                setChatInput(''); setIsChatLoading(true);
+
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: `Sen Dobby isminde, siyah tüylü sevimli bir Bombay kedisisin. Öğrenci koçusun. Asla yapay zeka olduğunu söyleme. Kedi gibi davran, samimi ol, arada espri yap. Öğrenciye çalışma programı hakkında destek ol. Soru: ${userMsg}` }] }]
+                        })
+                    });
+                    const data = await response.json();
+                    setMessages(p => [...p, { role: 'model', text: data.candidates[0].content.parts[0].text }]);
+                } catch {
+                    setMessages(p => [...p, { role: 'model', text: "Miyav! İnternet kablosunu mu ısırdım acaba? Bağlanamıyorum!" }]);
+                } finally { setIsChatLoading(false); }
+            };
+
+            useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+            return (
+                <div className="min-h-screen flex items-center justify-center p-4">
+                    <div className="w-full max-w-5xl glass-card rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[600px]">
+                        
+                        {/* Sol Panel: Program ve Onboarding */}
+                        <div className={`p-8 flex flex-col items-center justify-center ${scheduleData ? 'md:w-1/2 border-r border-slate-700/50' : 'w-full'}`}>
+                            {!scheduleData ? (
+                                <div className="text-center w-full max-w-sm animate-fade-in">
+                                    <div className="text-8xl mb-8 drop-shadow-2xl">🐈‍⬛</div>
+                                    <div className="bg-slate-800/80 p-6 rounded-2xl mb-8 relative border border-yellow-500/30">
+                                        <p className="text-lg leading-relaxed">{onboardingSteps[step].msg}</p>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        {step === 0 && <button onClick={handleNext} className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-4 rounded-2xl transition-all scale-100 hover:scale-105">Pati Ver!</button>}
+                                        {step === 1 && <div className="flex gap-4"><button onClick={() => {setHasHomework(true); setStep(2)}} className="flex-1 bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl font-bold">Ödevim Var</button><button onClick={() => {setHasHomework(false); setStep(3)}} className="flex-1 bg-slate-700 hover:bg-slate-600 py-4 rounded-2xl font-bold">Ödevim Yok</button></div>}
+                                        {step === 2 && <div className="flex gap-3"><input type="number" placeholder="Dakika..." className="flex-1 bg-slate-900 border border-slate-700 p-4 rounded-2xl focus:border-yellow-500 outline-none" onChange={e => setHwDuration(e.target.value)} /><button onClick={handleNext} className="bg-yellow-500 text-black px-6 rounded-2xl font-bold">></button></div>}
+                                        {step === 3 && <div className="flex gap-3"><button onClick={() => {setWorkRhythm(40); setStep(4)}} className="flex-1 bg-purple-600 py-4 rounded-2xl text-sm font-bold">40 dk Çalış</button><button onClick={() => {setWorkRhythm(50); setStep(4)}} className="flex-1 bg-indigo-600 py-4 rounded-2xl text-sm font-bold">50 dk Çalış</button></div>}
+                                        {step === 4 && <div className="flex gap-3"><input type="time" className="flex-1 bg-slate-900 border border-slate-700 p-4 rounded-2xl text-white" onChange={e => setStartTime(e.target.value)} /><button onClick={handleNext} className="bg-green-500 text-black px-6 rounded-2xl font-bold">Başla</button></div>}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="w-full h-full flex flex-col">
+                                    <div className="flex justify-between items-center mb-8">
+                                        <h2 className="text-3xl font-bold text-yellow-500">Günün Planı</h2>
+                                        <button onClick={() => location.reload()} className="text-xs text-slate-400 underline">Yeniden Yap</button>
+                                    </div>
+                                    <div className="space-y-4 overflow-y-auto pr-4 custom-scrollbar flex-1">
+                                        {schedule.map((s, i) => (
+                                            <div key={i} className={`p-5 rounded-2xl flex justify-between items-center transition-all hover:translate-x-1 ${s.type==='work'?'bg-slate-800/50 border-l-4 border-yellow-500':'bg-slate-900/30 border-l-4 border-green-500 opacity-80'}`}>
+                                                <div>
+                                                    <h3 className="font-bold text-sm md:text-base">{s.title}</h3>
+                                                    <p className="text-xs text-slate-500">{s.duration} Dakika</p>
+                                                </div>
+                                                <span className="font-mono text-sm md:text-lg font-bold bg-slate-900 px-3 py-1 rounded-lg">{s.time}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Sağ Panel: Dobby Chat */}
+                        {scheduleData && (
+                            <div className="md:w-1/2 flex flex-col h-[600px] bg-slate-950/50">
+                                <div className="p-6 bg-slate-900/80 border-b border-slate-800 flex items-center gap-4">
+                                    <span className="text-3xl">🐈‍⬛</span>
+                                    <div>
+                                        <h3 className="font-bold text-yellow-500">Dobby Sohbet</h3>
+                                        <p className="text-[10px] text-slate-500 uppercase tracking-widest">Canlı Koçluk Sistemi</p>
+                                    </div>
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                                    {messages.map((m, i) => (
+                                        <div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}>
+                                            <div className={`p-4 rounded-2xl max-w-[85%] text-sm shadow-sm ${m.role==='user'?'bg-blue-600 rounded-tr-none':'bg-slate-800 rounded-tl-none'}`}>
+                                                {m.text}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {isChatLoading && <div className="text-xs text-slate-500 animate-pulse">Dobby düşünüyor... 🐾</div>}
+                                    <div ref={messagesEndRef} />
+                                </div>
+                                <form onSubmit={askDobby} className="p-6 bg-slate-900 border-t border-slate-800 flex gap-3">
+                                    <input value={chatInput} onChange={e=>setChatInput(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm outline-none focus:border-yellow-500 transition-colors" placeholder="Dobby'ye bir şey sor..." />
+                                    <button className="bg-yellow-500 text-black px-6 rounded-2xl font-bold hover:bg-yellow-400 transition-all">Gönder</button>
+                                </form>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
