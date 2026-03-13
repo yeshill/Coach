@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // 1. API AYARLARI (Kendi anahtarınızı buraya ekleyin)
-const API_KEY = "BURAYA_KENDI_API_ANAHTARINIZI_YAZIN";
+const API_KEY = "AIzaSyABdcQXWAtCYKspWH5aH3ikyPesamleh-Q";
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 const systemInstruction = `Senin adın Dobby. Siyah tüylü, sarı gözlü sevimli bir Bombay kedisisin ve bir öğrenci eğitim koçusun. Asla bir yapay zeka veya program olduğunu söyleme. "Yapay zeka" terimini kesinlikle kullanma. Öğrenciyle samimi, terbiye sınırlarında esprili konuş. Arada "miyav", "patilemek", "yaş mama" gibi kelimeler kullan. Öğrenciye ders programına uyması için motive et, kaytarırsa tatlı tatlı uyar.`;
