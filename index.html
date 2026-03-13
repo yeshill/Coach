@@ -3,118 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dobby LGS - Dinamik Ramazan Koçu</title>
+    <title>Dobby LGS - Profesyonel Eğitim Koçu</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600;700&display=swap');
         
-        body { background-color: #0f172a; color: #f8fafc; margin: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: #020617; color: #f8fafc; margin: 0; font-family: 'Inter', sans-serif; overflow-x: hidden; }
         .quote-font { font-family: 'Playfair Display', serif; }
         
         /* Animasyonlar */
-        .fade-in { animation: fadeIn 1s ease-in forwards; }
-        .fade-out { animation: fadeOut 1s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-10px); } }
+        .fade-in { animation: fadeIn 0.8s ease-in forwards; }
+        .fade-out { animation: fadeOut 0.8s ease-out forwards; }
+        .slide-up { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .glow-effect { box-shadow: 0 0 25px rgba(234, 179, 8, 0.15); }
+        .glow-text { text-shadow: 0 0 10px rgba(234, 179, 8, 0.5); }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
         
         /* Kaydırma Çubuğu */
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px;}
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
         
-        /* Takvim Grid Sistemi */
-        .calendar-grid { display: grid; grid-template-columns: 80px repeat(7, minmax(120px, 1fr)); gap: 1px; background-color: #334155; border: 1px solid #334155; border-radius: 12px; overflow: hidden;}
-        .calendar-header { background-color: #1e293b; padding: 12px; text-align: center; font-weight: bold; font-size: 0.85rem; color: #e2e8f0; }
-        .calendar-cell { background-color: #0f172a; padding: 10px; min-height: 80px; display: flex; flex-direction: column; gap: 4px; transition: background-color 0.2s; }
-        .calendar-cell:hover { background-color: #1e293b; }
-        .calendar-time-label { background-color: #1e293b; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #94a3b8; font-weight: 600; border-right: 1px solid #334155;}
+        /* Takvim Grid */
+        .calendar-grid { display: grid; grid-template-columns: 80px repeat(7, minmax(130px, 1fr)); gap: 1px; background-color: #1e293b; border: 1px solid #1e293b; border-radius: 16px; overflow: hidden; }
+        .calendar-header { background-color: #0f172a; padding: 15px 10px; text-align: center; font-weight: bold; font-size: 0.85rem; color: #cbd5e1; }
+        .calendar-cell { background-color: #020617; padding: 12px; min-height: 90px; display: flex; flex-direction: column; gap: 6px; transition: all 0.2s; }
+        .calendar-cell:hover { background-color: #0f172a; }
+        .calendar-time-label { background-color: #0f172a; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #94a3b8; font-weight: 600; border-right: 1px solid #1e293b; }
         
-        /* PDF Yazdırma Ayarları */
-        .pdf-mode { background-color: white !important; color: black !important; }
-        .pdf-mode * { border-color: #ddd !important; }
+        /* PDF Yazdırma Teması (Kağıt Dostu Beyaz) */
+        .pdf-mode { background-color: white !important; color: black !important; padding: 20px !important; }
+        .pdf-mode * { border-color: #ccc !important; }
+        .pdf-mode .bg-slate-900, .pdf-mode .bg-slate-950, .pdf-mode .bg-slate-800 { background-color: white !important; }
+        .pdf-mode .text-slate-300, .pdf-mode .text-slate-400 { color: #333 !important; }
+        .pdf-mode input { border: 1px solid #ddd !important; color: black !important; }
         .pdf-mode .calendar-cell { background-color: white !important; color: black !important; }
-        .pdf-mode .calendar-header, .pdf-mode .calendar-time-label { background-color: #f1f5f9 !important; color: black !important; }
+        .pdf-mode .calendar-header, .pdf-mode .calendar-time-label { background-color: #f8fafc !important; color: black !important; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+        const { useState, useEffect, useMemo, useRef } = React;
 
-        // Kendi Google Script Linkiniz
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxAR1NFhHbFecZUmnYe_7jYuN00vGEMHYJT6W-HsdCTdf5cwHDSVye1YcYpIIHx1MIR6g/exec";
-
-        const ALL_SUBJECTS = ["Türkçe", "Matematik", "Fen Bilimleri", "İngilizce", "T.C. İnkılap Tarihi", "Din Kültürü", "Genel Deneme"];
-        
+        const INITIAL_SUBJECTS = ["Türkçe", "Matematik", "Fen Bilimleri", "İngilizce", "T.C. İnkılap Tarihi", "Din Kültürü", "Genel Deneme"];
         const QUOTES = [
             "Gecenin karanlığında aydınlanan zihinler, sabahın güneşinden daha parlaktır...",
             "Zorluklar seni durdurmak için değil, ne kadar güçlü olduğunu göstermek içindir.",
             "Sahurun bereketi, masandaki kalem sesine karışsın. Harika işler başaracaksın.",
-            "Bugün yapacağın her 30 dakikalık odaklanma, yarınki büyük zaferinin tuğlasıdır.",
-            "İraden en büyük gücündür. Oruçla bilenen iradeni, hayallerin için kullan."
+            "Bugün yapacağın her 30 dakikalık odaklanma, yarınki büyük zaferinin tuğlasıdır."
         ];
 
+        // --- BİLEŞEN: MOTİVASYON SÖZÜ ---
+        const QuoteDisplay = () => {
+            const [qIdx, setQIdx] = useState(Math.floor(Math.random() * QUOTES.length));
+            const [fade, setFade] = useState("fade-in");
+            
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    setFade("fade-out");
+                    setTimeout(() => {
+                        setQIdx(prev => (prev + 1) % QUOTES.length);
+                        setFade("fade-in");
+                    }, 800);
+                }, 5000);
+                return () => clearInterval(interval);
+            }, []);
+
+            return (
+                <div className="text-center max-w-lg mx-auto mb-8 min-h-[80px] flex items-center justify-center">
+                    <p className={`quote-font text-xl md:text-2xl text-yellow-500 italic ${fade}`}>"{QUOTES[qIdx]}"</p>
+                </div>
+            );
+        };
+
         const App = () => {
-            const [view, setView] = useState("login"); // login, onboarding, dashboard
+            const [view, setView] = useState("login"); // login, splash, guide, onboarding, dashboard
             const [user, setUser] = useState(null);
             const [loading, setLoading] = useState(false);
+            const [errorMsg, setErrorMsg] = useState("");
             
             // Veri Durumları
             const [config, setConfig] = useState(null);
             const [programData, setProgramData] = useState({});
+            const [subjects, setSubjects] = useState(INITIAL_SUBJECTS);
             
-            // Login Form
             const [formData, setFormData] = useState({ name: '', class: '8', no: '' });
-            const [errorMsg, setErrorMsg] = useState("");
-
-            // Sihirbaz (Onboarding) State
-            const [wizBlocks, setWizBlocks] = useState(6); // 6 blok = 3 saat
+            
+            // Sihirbaz
+            const [wizBlocks, setWizBlocks] = useState(6);
             const [wizTime, setWizTime] = useState("14:00");
             const [wizSubjects, setWizSubjects] = useState(["Matematik", "Türkçe", "Fen Bilimleri"]);
-
-            // Sekme Durumu (daily / calendar)
+            
+            // Panel Ayarları
             const [activeTab, setActiveTab] = useState("daily");
+            const [editMode, setEditMode] = useState(false);
+            const [guideStep, setGuideStep] = useState(0);
 
-            // --- GİRİŞ İŞLEMİ ---
+            // --- 1. GİRİŞ İŞLEMİ VE VERİ ÇEKME ---
             const handleLogin = async (e) => {
                 e.preventDefault();
                 setLoading(true); setErrorMsg("");
                 try {
                     const resp = await fetch(`${SCRIPT_URL}?no=${formData.no}&class=${formData.class}`);
                     const textResp = await resp.text();
+                    let savedData = null;
                     try {
                         const result = JSON.parse(textResp);
-                        if (result.status === "found") {
-                            const saved = JSON.parse(result.data);
-                            setProgramData(saved.progress || {});
-                            if (saved.config) {
-                                setConfig(saved.config);
-                                setView("dashboard");
-                            } else {
-                                setView("onboarding");
-                            }
+                        if (result.status === "found") savedData = JSON.parse(result.data);
+                    } catch(e) {}
+
+                    setUser(formData);
+                    setView("splash");
+
+                    setTimeout(() => {
+                        if (savedData && savedData.config) {
+                            // Eski Kullanıcı: Kaldığı yerden devam et
+                            setConfig(savedData.config);
+                            setProgramData(savedData.progress || {});
+                            if(savedData.subjects) setSubjects(savedData.subjects);
+                            setView("dashboard");
                         } else {
-                            setView("onboarding");
+                            // Yeni Kullanıcı: Rehbere yönlendir
+                            setView("guide");
                         }
-                        setUser(formData);
-                    } catch(e) { setErrorMsg("Kayıt okunamadı, sunucu hatası."); }
-                } catch (err) { setErrorMsg("İnternet bağlantını kontrol et miyav!"); } 
-                finally { setLoading(false); }
+                    }, 3000);
+
+                } catch (err) { 
+                    setErrorMsg("Bağlantı kurulamadı. Lütfen internetini kontrol et miyav!"); 
+                    setLoading(false);
+                } 
             };
 
-            // --- BULUTA KAYDETME ---
-            const saveToCloud = async (newConfig, newProgress) => {
-                const payload = { ...user, state: { config: newConfig, progress: newProgress } };
+            // --- 2. BULUTA KAYDETME ---
+            const saveToCloud = async (newConfig, newProgress, newSubjects) => {
+                const payload = { 
+                    ...user, 
+                    state: { config: newConfig, progress: newProgress, subjects: newSubjects || subjects } 
+                };
                 try {
                     await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-                } catch (e) { console.error("Buluta kayıt hatası."); }
+                } catch (e) { console.error("Kayıt hatası"); }
             };
 
-            // --- DİNAMİK PROGRAM OLUŞTURUCU (30 dk bloklar + 10 dk mola) ---
+            // --- 3. DİNAMİK PROGRAM MOTORU ---
             const generatedSchedule = useMemo(() => {
                 if (!config) return [];
                 const days = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
@@ -124,15 +166,13 @@
                     let [h, m] = config.startTime.split(':').map(Number);
                     for (let b = 0; b < config.blocksPerDay; b++) {
                         let startStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
-                        // 30 dk çalışma
                         let endM = m + 30; let endH = h;
                         if (endM >= 60) { endH++; endM -= 60; }
                         let endStr = `${String(endH).padStart(2,'0')}:${String(endM).padStart(2,'0')}`;
                         
                         let subj = config.subjects[(d * config.blocksPerDay + b) % config.subjects.length];
-                        blocks.push({ id: `d${d}_b${b}`, start: startStr, end: endStr, subject: subj });
+                        blocks.push({ id: `d${d}_b${b}`, start: startStr, end: endStr, defaultSubject: subj });
                         
-                        // 10 dk mola
                         m = endM + 10; h = endH;
                         if (m >= 60) { h++; m -= 60; }
                     }
@@ -144,110 +184,135 @@
             const updateProgress = (id, field, value) => {
                 const newData = { ...programData, [`${id}_${field}`]: value };
                 setProgramData(newData);
-                saveToCloud(config, newData);
+                saveToCloud(config, newData, subjects);
             };
 
-            // --- PDF DIŞA AKTARMA ---
+            const updateSubject = (id, value) => {
+                const newData = { ...programData, [`${id}_subject`]: value };
+                setProgramData(newData);
+                saveToCloud(config, newData, subjects);
+            };
+
+            // --- 4. PDF ÇIKTISI ---
             const exportPDF = () => {
                 const element = document.getElementById('printable-area');
-                element.classList.add('pdf-mode'); // Beyaz arka plan sınıfı
+                element.classList.add('pdf-mode');
                 
                 const opt = {
                     margin:       10,
-                    filename:     `${user.name}_Programi.pdf`,
+                    filename:     `${user.name}_Dobby_Programi.pdf`,
                     image:        { type: 'jpeg', quality: 0.98 },
                     html2canvas:  { scale: 2, useCORS: true },
-                    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+                    jsPDF:        { unit: 'mm', format: 'a4', orientation: activeTab === 'calendar' ? 'landscape' : 'portrait' }
                 };
 
                 html2pdf().set(opt).from(element).save().then(() => {
-                    element.classList.remove('pdf-mode'); // Eski haline çevir
+                    element.classList.remove('pdf-mode');
                 });
             };
 
-            // --- BİLEŞEN: MOTİVASYON SÖZÜ (Animasyonlu) ---
-            const QuoteDisplay = () => {
-                const [qIdx, setQIdx] = useState(0);
-                const [fade, setFade] = useState("fade-in");
-                
-                useEffect(() => {
-                    const interval = setInterval(() => {
-                        setFade("fade-out");
-                        setTimeout(() => {
-                            setQIdx(prev => (prev + 1) % QUOTES.length);
-                            setFade("fade-in");
-                        }, 1000);
-                    }, 5000);
-                    return () => clearInterval(interval);
-                }, []);
-
-                return (
-                    <div className="text-center max-w-md mx-auto mb-10 min-h-[100px] flex items-center justify-center">
-                        <p className={`quote-font text-xl md:text-2xl text-yellow-500 italic ${fade}`}>"{QUOTES[qIdx]}"</p>
-                    </div>
-                );
-            };
-
-            // --- EKRAN 1: GİRİŞ ---
+            // --- EKRAN: GİRİŞ (LOGIN) ---
             if (view === "login") return (
-                <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-950 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
+                <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
                     <QuoteDisplay />
-                    <div className="bg-slate-900/80 backdrop-blur-md p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-800 relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-600 to-yellow-400"></div>
-                        <div className="text-6xl mb-4 text-center">🐈‍⬛</div>
-                        <h1 className="text-2xl font-bold text-center text-white mb-2">Dobby ile Ramazan Koçluğu</h1>
-                        <p className="text-slate-400 text-sm mb-6 text-center">Bilgilerini gir, esnek programını oluşturalım.</p>
+                    <div className="bg-slate-900/60 backdrop-blur-xl p-10 rounded-3xl shadow-2xl w-full max-w-md border border-slate-800 relative overflow-hidden glow-effect slide-up">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600"></div>
+                        <div className="text-7xl mb-6 text-center drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]">🐈‍⬛</div>
+                        <h1 className="text-3xl font-bold text-center text-white mb-2 glow-text">Dobby Akademi</h1>
+                        <p className="text-slate-400 text-sm mb-8 text-center">Ramazan Kampı & LGS Koçluğu</p>
                         
-                        {errorMsg && <div className="bg-red-900/30 border border-red-500 text-red-300 p-3 rounded-lg text-xs mb-4 text-center">{errorMsg}</div>}
+                        {errorMsg && <div className="bg-red-900/40 border border-red-500 text-red-200 p-3 rounded-xl text-sm mb-6 text-center">{errorMsg}</div>}
 
-                        <form onSubmit={handleLogin} className="space-y-4">
-                            <input required placeholder="Ad Soyad" className="w-full bg-slate-950 p-4 rounded-xl outline-none border border-slate-800 focus:border-yellow-500 text-white transition-all" onChange={e => setFormData({...formData, name: e.target.value})} />
+                        <form onSubmit={handleLogin} className="space-y-5">
+                            <input required placeholder="Adın Soyadın" className="w-full bg-slate-950/80 p-4 rounded-xl outline-none border border-slate-800 focus:border-yellow-500 text-white transition-all placeholder-slate-600" onChange={e => setFormData({...formData, name: e.target.value})} />
                             <div className="flex gap-4">
-                                <select className="flex-1 bg-slate-950 p-4 rounded-xl border border-slate-800 text-slate-300 outline-none focus:border-yellow-500" onChange={e => setFormData({...formData, class: e.target.value})}>
+                                <select className="flex-1 bg-slate-950/80 p-4 rounded-xl border border-slate-800 text-slate-300 outline-none focus:border-yellow-500" onChange={e => setFormData({...formData, class: e.target.value})}>
                                     <option value="8">8. Sınıf (LGS)</option>
                                     <option value="7">7. Sınıf</option>
                                     <option value="6">6. Sınıf</option>
                                     <option value="5">5. Sınıf</option>
                                 </select>
-                                <input required type="number" placeholder="Okul No" className="flex-1 bg-slate-950 p-4 rounded-xl border border-slate-800 text-white outline-none focus:border-yellow-500" onChange={e => setFormData({...formData, no: e.target.value})} />
+                                <input required type="number" placeholder="Okul No" className="flex-1 bg-slate-950/80 p-4 rounded-xl border border-slate-800 text-white outline-none focus:border-yellow-500 placeholder-slate-600" onChange={e => setFormData({...formData, no: e.target.value})} />
                             </div>
-                            <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-yellow-600 to-yellow-500 text-black font-bold py-4 rounded-xl hover:from-yellow-500 hover:to-yellow-400 transition-all transform active:scale-95 shadow-lg shadow-yellow-500/20">
-                                {loading ? "Bağlanıyor..." : "Giriş Yap"}
+                            <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 text-black font-bold text-lg py-4 rounded-xl hover:from-yellow-400 hover:to-yellow-500 transition-all transform active:scale-95 shadow-[0_0_20px_rgba(234,179,8,0.3)] mt-2">
+                                {loading ? "Kapı Açılıyor..." : "İçeri Gir"}
                             </button>
                         </form>
                     </div>
                 </div>
             );
 
-            // --- EKRAN 2: SİHİRBAZ (Esnek Planlama) ---
+            // --- EKRAN: SPLASH (BEKLEME) ---
+            if (view === "splash") return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-black text-center fade-in">
+                    <div className="text-8xl mb-6 animate-bounce">🐈‍⬛</div>
+                    <h2 className="text-3xl font-bold text-yellow-500 mb-4 glow-text">Hoş Geldin {user.name}!</h2>
+                    <p className="text-slate-400 text-lg">Pati izleri takip ediliyor, verilerin yükleniyor...</p>
+                </div>
+            );
+
+            // --- EKRAN: REHBER (GUIDE) ---
+            if (view === "guide") {
+                const guideSteps = [
+                    { title: "Dobby'ye Hoş Geldin!", desc: "Ben senin yeni sanal koçunum. Seninle beraber Ramazan boyunca harika bir kamp yapacağız.", icon: "🎉" },
+                    { title: "Esnek Planlama", desc: "Öncelikle günde kaç saat çalışacağını ve saat kaçta başlayacağını seçeceğiz. Ben de sana uygun vardiyaları çıkaracağım.", icon: "⚙️" },
+                    { title: "Soru Takibi & Özgürlük", desc: "Çözdüğün soruları sisteme girebilir, istersen çalışma programındaki derslerin isimlerini o an değiştirebilirsin.", icon: "📝" },
+                    { title: "Kalıcı Kayıt & Çıktı", desc: "Sen 'Kaydet' demesen bile ben arka planda verilerini buluta yedeklerim. İstersen programını PDF olarak indirebilirsin.", icon: "☁️" }
+                ];
+                return (
+                    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950">
+                        <div className="bg-slate-900 p-10 rounded-3xl border border-slate-800 w-full max-w-lg shadow-2xl slide-up text-center relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500"></div>
+                            <div className="text-6xl mb-6">{guideSteps[guideStep].icon}</div>
+                            <h2 className="text-2xl font-bold text-yellow-500 mb-4">{guideSteps[guideStep].title}</h2>
+                            <p className="text-slate-300 mb-10 leading-relaxed">{guideSteps[guideStep].desc}</p>
+                            
+                            <div className="flex justify-between items-center">
+                                <div className="flex gap-2">
+                                    {guideSteps.map((_, i) => <div key={i} className={`h-2 w-2 rounded-full ${i === guideStep ? 'bg-yellow-500' : 'bg-slate-700'}`}></div>)}
+                                </div>
+                                <button onClick={() => {
+                                    if(guideStep < guideSteps.length - 1) setGuideStep(guideStep + 1);
+                                    else setView("onboarding");
+                                }} className="bg-yellow-500 text-black px-6 py-3 rounded-xl font-bold hover:bg-yellow-400 transition-colors">
+                                    {guideStep < guideSteps.length - 1 ? "İleri ➔" : "Hadi Başlayalım!"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // --- EKRAN: SİHİRBAZ (ONBOARDING) ---
             if (view === "onboarding") return (
                 <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950">
-                    <div className="bg-slate-900 p-8 rounded-3xl border border-slate-800 w-full max-w-xl shadow-2xl">
-                        <div className="text-4xl mb-6">⚙️ Dinamik Program Kurulumu</div>
-                        <p className="text-slate-400 mb-8">Dobby'nin sana özel bir program hazırlaması için birkaç soruyu yanıtla.</p>
+                    <div className="bg-slate-900 p-8 rounded-3xl border border-slate-800 w-full max-w-xl shadow-2xl slide-up">
+                        <div className="text-4xl mb-4 text-center">🎯</div>
+                        <h2 className="text-2xl font-bold text-white text-center mb-2">Program Kurulumu</h2>
+                        <p className="text-slate-400 text-center mb-8 text-sm">Dobby'nin sana özel vardiyalar oluşturması için seçimlerini yap.</p>
                         
                         <div className="space-y-6">
-                            <div>
-                                <label className="block text-sm font-bold text-yellow-500 mb-2">1. Günde kaç blok (30 Dk) çalışmak istersin?</label>
+                            <div className="bg-slate-950/50 p-5 rounded-2xl border border-slate-800/50">
+                                <label className="block text-sm font-bold text-yellow-500 mb-3">1. Günde kaç blok (30 Dk) çalışmak istersin?</label>
                                 <div className="grid grid-cols-3 gap-3">
                                     {[4, 6, 8].map(n => (
-                                        <button key={n} onClick={() => setWizBlocks(n)} className={`p-3 rounded-xl border font-bold transition-all ${wizBlocks === n ? 'bg-yellow-500 text-black border-yellow-500' : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600'}`}>
-                                            {n} Blok <span className="block text-xs font-normal">({n * 30 / 60} Saat)</span>
+                                        <button key={n} onClick={() => setWizBlocks(n)} className={`p-4 rounded-xl border font-bold transition-all ${wizBlocks === n ? 'bg-yellow-500 text-black border-yellow-500 glow-effect' : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500'}`}>
+                                            {n} Blok <span className="block text-xs font-normal opacity-80 mt-1">({n * 30 / 60} Saat)</span>
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-bold text-yellow-500 mb-2">2. Bu hafta odaklanacağın dersler (Seç/Kaldır)</label>
+                            <div className="bg-slate-950/50 p-5 rounded-2xl border border-slate-800/50">
+                                <label className="block text-sm font-bold text-yellow-500 mb-3">2. Odaklanacağın dersler</label>
                                 <div className="flex flex-wrap gap-2">
-                                    {ALL_SUBJECTS.map(s => {
+                                    {subjects.map(s => {
                                         const isSel = wizSubjects.includes(s);
                                         return (
                                             <button key={s} onClick={() => {
                                                 if (isSel && wizSubjects.length > 1) setWizSubjects(wizSubjects.filter(x => x !== s));
                                                 else if (!isSel) setWizSubjects([...wizSubjects, s]);
-                                            }} className={`px-4 py-2 rounded-full text-sm border transition-all ${isSel ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-950 border-slate-800 text-slate-400'}`}>
+                                            }} className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${isSel ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>
                                                 {s} {isSel && "✓"}
                                             </button>
                                         );
@@ -255,682 +320,139 @@
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-bold text-yellow-500 mb-2">3. Günlük çalışmaya saat kaçta başlayacaksın?</label>
-                                <input type="time" value={wizTime} onChange={(e) => setWizTime(e.target.value)} className="bg-slate-950 border border-slate-800 text-white p-3 rounded-xl w-full focus:outline-none focus:border-yellow-500" />
+                            <div className="bg-slate-950/50 p-5 rounded-2xl border border-slate-800/50">
+                                <label className="block text-sm font-bold text-yellow-500 mb-3">3. Çalışmaya saat kaçta başlayacaksın?</label>
+                                <input type="time" value={wizTime} onChange={(e) => setWizTime(e.target.value)} className="bg-slate-900 border border-slate-700 text-white p-4 rounded-xl w-full focus:outline-none focus:border-yellow-500 text-lg" />
                             </div>
 
                             <button onClick={() => {
                                 const newConfig = { blocksPerDay: wizBlocks, subjects: wizSubjects, startTime: wizTime };
                                 setConfig(newConfig);
-                                saveToCloud(newConfig, programData);
+                                saveToCloud(newConfig, programData, subjects);
                                 setView("dashboard");
-                            }} className="w-full bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-500 transition-all mt-4">
-                                Sihirbazı Tamamla ve Programı Çıkar ✨
+                            }} className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-4 rounded-xl hover:from-green-400 hover:to-emerald-500 transition-all shadow-lg shadow-green-900/50">
+                                Programı Çıkar ✨
                             </button>
                         </div>
                     </div>
                 </div>
             );
 
-            // --- EKRAN 3: ANA KONTROL PANELİ (Takvim / Liste) ---
+            // --- EKRAN: DASHBOARD (ANA PANEL) ---
             return (
-                <div className="max-w-7xl mx-auto p-4 md:p-8">
-                    <header className="flex flex-col md:flex-row justify-between items-center mb-8 bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-xl gap-4">
-                        <div className="flex items-center gap-4">
-                            <div className="text-4xl">🐈‍⬛</div>
+                <div className="max-w-7xl mx-auto p-4 md:p-8 fade-in">
+                    {/* Üst Bilgi Barı */}
+                    <header className="flex flex-col lg:flex-row justify-between items-center mb-8 bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-2xl gap-6">
+                        <div className="flex items-center gap-5">
+                            <div className="text-5xl drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">🐈‍⬛</div>
                             <div>
-                                <h2 className="text-xl font-bold text-yellow-500">{user.name}</h2>
-                                <p className="text-xs text-slate-400 uppercase tracking-widest">{user.class}. Sınıf • Dobby Özel Planı</p>
+                                <h2 className="text-2xl font-bold text-yellow-500 glow-text">{user.name}</h2>
+                                <p className="text-xs text-slate-400 uppercase tracking-widest mt-1 bg-slate-950 px-3 py-1 rounded-full inline-block border border-slate-800">{user.class}. Sınıf Koçluk Paneli</p>
                             </div>
                         </div>
                         <div className="flex flex-wrap gap-3 justify-center">
-                            <div className="bg-slate-950 p-1 rounded-xl flex border border-slate-800">
-                                <button onClick={() => setActiveTab("daily")} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'daily' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-white'}`}>Günlük Akış</button>
-                                <button onClick={() => setActiveTab("calendar")} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'calendar' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-white'}`}>Takvim</button>
+                            <div className="bg-slate-950 p-1.5 rounded-2xl flex border border-slate-800">
+                                <button onClick={() => setActiveTab("daily")} className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'daily' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-500 hover:text-white'}`}>Günlük Akış</button>
+                                <button onClick={() => setActiveTab("calendar")} className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'calendar' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-500 hover:text-white'}`}>Takvim</button>
                             </div>
-                            <button onClick={exportPDF} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2">📄 PDF İndir</button>
-                            <button onClick={() => setView("onboarding")} className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl text-sm transition-all border border-slate-700">⚙️ Ayarlar</button>
+                            <button onClick={() => setEditMode(!editMode)} className={`px-5 py-2 rounded-2xl text-sm font-bold transition-all flex items-center gap-2 ${editMode ? 'bg-green-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'}`}>
+                                {editMode ? "💾 İsimleri Kaydet" : "✏️ Dersleri Düzenle"}
+                            </button>
+                            <button onClick={exportPDF} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-2xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg shadow-blue-900/30">📄 PDF İndir</button>
+                            <button onClick={() => setView("onboarding")} className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-2xl text-sm transition-all border border-slate-700">⚙️</button>
                         </div>
                     </header>
 
-                    {/* PDF ALANI BAŞLANGICI */}
-                    <div id="printable-area" className="p-4 rounded-xl transition-colors duration-300">
+                    {/* Yazdırılabilir Alan */}
+                    <div id="printable-area" className="p-2 transition-colors duration-300 rounded-3xl">
+                        
+                        {/* GÜNLÜK AKIŞ */}
                         {activeTab === "daily" && (
-                            <div className="space-y-6">
+                            <div className="space-y-8">
                                 {generatedSchedule.map(day => (
-                                    <div key={day.dayNum} className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
-                                        <div className="bg-slate-800/50 p-4 border-b border-slate-800 flex justify-between items-center">
-                                            <h3 className="font-bold text-lg text-yellow-500">{day.dayNum}. Gün <span className="text-slate-400 text-sm font-normal">({day.dayName})</span></h3>
+                                    <div key={day.dayNum} className="bg-slate-900/50 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+                                        <div className="bg-slate-900 p-5 border-b border-slate-800 flex justify-between items-center relative overflow-hidden">
+                                            <div className="absolute left-0 top-0 w-1 h-full bg-yellow-500"></div>
+                                            <h3 className="font-bold text-xl text-white ml-2">{day.dayNum}. Gün <span className="text-yellow-500 text-sm font-normal ml-2 tracking-wider uppercase">({day.dayName})</span></h3>
                                         </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
-                                            {day.blocks.map((block, idx) => (
-                                                <div key={block.id} className="bg-slate-950 border border-slate-800 p-4 rounded-xl flex flex-col gap-3 relative">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-xs font-bold bg-slate-800 text-slate-300 px-2 py-1 rounded-md">{idx+1}. Blok</span>
-                                                        <span className="text-xs font-mono text-yellow-600">{block.start} - {block.end}</span>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 p-6">
+                                            {day.blocks.map((block, idx) => {
+                                                const currentSubj = programData[`${block.id}_subject`] || block.defaultSubject;
+                                                return (
+                                                    <div key={block.id} className="bg-slate-950 border border-slate-800 p-5 rounded-2xl flex flex-col gap-4 relative transition-transform hover:-translate-y-1 hover:border-slate-600">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-xs font-bold bg-slate-800/80 text-yellow-500 px-3 py-1.5 rounded-lg border border-slate-700">{idx+1}. Blok</span>
+                                                            <span className="text-xs font-mono font-bold bg-slate-900 px-2 py-1 rounded text-slate-300">{block.start} - {block.end}</span>
+                                                        </div>
+                                                        
+                                                        {editMode ? (
+                                                            <input type="text" className="font-bold text-lg bg-slate-900 border border-blue-500 p-2 rounded-lg text-white outline-none w-full" value={currentSubj} onChange={e => updateSubject(block.id, e.target.value)} />
+                                                        ) : (
+                                                            <h4 className="font-bold text-lg text-white">{currentSubj}</h4>
+                                                        )}
+                                                        
+                                                        <div className="grid grid-cols-3 gap-3 bg-slate-900/50 p-3 rounded-xl border border-slate-800/50">
+                                                            <div className="flex flex-col items-center gap-1">
+                                                                <span className="text-[10px] text-green-500 font-bold uppercase">Doğru</span>
+                                                                <input type="number" className="bg-slate-950 border border-slate-800 p-2 rounded-lg text-center text-sm font-bold text-green-400 outline-none focus:border-green-500 w-full" value={programData[`${block.id}_D`] || ''} onChange={e => updateProgress(block.id, 'D', e.target.value)} />
+                                                            </div>
+                                                            <div className="flex flex-col items-center gap-1">
+                                                                <span className="text-[10px] text-red-500 font-bold uppercase">Yanlış</span>
+                                                                <input type="number" className="bg-slate-950 border border-slate-800 p-2 rounded-lg text-center text-sm font-bold text-red-400 outline-none focus:border-red-500 w-full" value={programData[`${block.id}_Y`] || ''} onChange={e => updateProgress(block.id, 'Y', e.target.value)} />
+                                                            </div>
+                                                            <div className="flex flex-col items-center gap-1">
+                                                                <span className="text-[10px] text-slate-400 font-bold uppercase">Boş</span>
+                                                                <input type="number" className="bg-slate-950 border border-slate-800 p-2 rounded-lg text-center text-sm font-bold text-slate-300 outline-none focus:border-slate-500 w-full" value={programData[`${block.id}_B`] || ''} onChange={e => updateProgress(block.id, 'B', e.target.value)} />
+                                                            </div>
+                                                        </div>
+                                                        <input type="text" placeholder="Hangi konuyu çalıştın?" className="bg-slate-900 border border-slate-800 p-3 rounded-xl text-xs w-full text-slate-200 outline-none focus:border-yellow-500 focus:bg-slate-950 transition-colors" value={programData[`${block.id}_not`] || ''} onChange={e => updateProgress(block.id, 'not', e.target.value)}/>
                                                     </div>
-                                                    <h4 className="font-bold text-lg">{block.subject}</h4>
-                                                    
-                                                    <div className="grid grid-cols-3 gap-2 mt-2">
-                                                        <input type="number" placeholder="D" className="bg-slate-900 border border-slate-800 p-2 rounded-lg text-center text-xs text-green-400 focus:outline-none focus:border-green-500" value={programData[`${block.id}_D`] || ''} onChange={e => updateProgress(block.id, 'D', e.target.value)} title="Doğru"/>
-                                                        <input type="number" placeholder="Y" className="bg-slate-900 border border-slate-800 p-2 rounded-lg text-center text-xs text-red-400 focus:outline-none focus:border-red-500" value={programData[`${block.id}_Y`] || ''} onChange={e => updateProgress(block.id, 'Y', e.target.value)} title="Yanlış"/>
-                                                        <input type="number" placeholder="B" className="bg-slate-900 border border-slate-800 p-2 rounded-lg text-center text-xs text-slate-400 focus:outline-none focus:border-slate-500" value={programData[`${block.id}_B`] || ''} onChange={e => updateProgress(block.id, 'B', e.target.value)} title="Boş"/>
-                                                    </div>
-                                                    <input type="text" placeholder="Çalışılan Konu / Not" className="bg-slate-900 border border-slate-800 p-2 rounded-lg text-xs w-full mt-1 text-slate-300 focus:outline-none focus:border-yellow-500" value={programData[`${block.id}_not`] || ''} onChange={e => updateProgress(block.id, 'not', e.target.value)}/>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         )}
 
+                        {/* TAKVİM (GRID) AKIŞI */}
                         {activeTab === "calendar" && (
-                            <div className="overflow-x-auto pb-4 custom-scrollbar">
-                                <h3 className="text-xl font-bold mb-4 text-center text-yellow-500 print:text-black">Haftalık Çalışma Takvimi</h3>
-                                <div className="calendar-grid min-w-[900px]">
-                                    {/* Başlıklar */}
-                                    <div className="calendar-header">Saat</div>
-                                    {generatedSchedule.map(d => <div key={d.dayNum} className="calendar-header">{d.dayName}</div>)}
+                            <div className="overflow-x-auto pb-6 custom-scrollbar bg-slate-900/30 p-6 rounded-3xl border border-slate-800">
+                                <h3 className="text-2xl font-bold mb-6 text-center text-yellow-500 print:text-black">Haftalık Dobby Takvimi</h3>
+                                <div className="calendar-grid min-w-[1000px] shadow-2xl">
+                                    <div className="calendar-header">Saat / Blok</div>
+                                    {generatedSchedule.map(d => <div key={d.dayNum} className="calendar-header border-b-2 border-yellow-500/50">{d.dayName}</div>)}
                                     
-                                    {/* Satırlar (Zaman Blokları) */}
                                     {Array.from({length: config.blocksPerDay}).map((_, blockIdx) => (
                                         <React.Fragment key={blockIdx}>
-                                            <div className="calendar-time-label">
-                                                {generatedSchedule[0].blocks[blockIdx].start}
+                                            <div className="calendar-time-label flex-col gap-1">
+                                                <span className="text-white">{blockIdx+1}. Blok</span>
+                                                <span className="text-[10px] font-mono opacity-60">{generatedSchedule[0].blocks[blockIdx].start}</span>
                                             </div>
                                             {generatedSchedule.map(day => {
                                                 const block = day.blocks[blockIdx];
+                                                const currentSubj = programData[`${block.id}_subject`] || block.defaultSubject;
                                                 const totalQ = (parseInt(programData[`${block.id}_D`])||0) + (parseInt(programData[`${block.id}_Y`])||0) + (parseInt(programData[`${block.id}_B`])||0);
                                                 return (
                                                     <div key={block.id} className="calendar-cell">
-                                                        <span className="text-xs font-bold text-yellow-500">{block.subject}</span>
-                                                        {programData[`${block.id}_not`] && <span className="text-[10px] text-slate-400 leading-tight truncate">{programData[`${block.id}_not`]}</span>}
-                                                        {totalQ > 0 && <span className="mt-auto text-[9px] bg-green-900/40 text-green-400 px-1 py-0.5 rounded w-max inline-block">{totalQ} Soru Çözüldü</span>}
+                                                        <span className="text-xs font-bold text-yellow-500 truncate" title={currentSubj}>{currentSubj}</span>
+                                                        {programData[`${block.id}_not`] && <span className="text-[10px] text-slate-400 leading-tight line-clamp-2" title={programData[`${block.id}_not`]}>{programData[`${block.id}_not`]}</span>}
+                                                        {totalQ > 0 && <span className="mt-auto text-[10px] bg-green-900/30 border border-green-500/30 text-green-400 px-2 py-1 rounded-md w-max font-bold">{totalQ} Soru</span>}
                                                     </div>
                                                 );
                                             })}
                                         </React.Fragment>
                                     ))}
                                 </div>
-                                <div className="mt-4 text-center text-xs text-slate-500">Not: Bloklar arası 10'ar dakika mola süresi eklenerek hesaplanmıştır.</div>
                             </div>
                         )}
                     </div>
-                    {/* PDF ALANI BİTİŞİ */}
                 </div>
             );
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
-    </script>
-</body>
-</html><!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>7 Günlük Ramazan Çalışma Programı</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
-
-        :root {
-            --primary: #4A90E2;
-            --secondary: #F39C12;
-            --bg-color: #F4F7F6;
-            --card-bg: #FFFFFF;
-            --text-dark: #2C3E50;
-            --text-light: #7F8C8D;
-            --success: #27AE60;
-            --danger: #E74C3C;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Poppins', sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-dark);
-            padding-bottom: 50px;
-        }
-
-        /* --- YENİ EKLENEN GİRİŞ EKRANI CSS --- */
-        #login-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, #2C3E50, #4A90E2);
-            z-index: 10000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-
-        .login-card {
-            background: white;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
-
-        .login-card h2 {
-            color: var(--primary);
-            margin-bottom: 5px;
-            font-size: 1.8rem;
-        }
-
-        .login-card p {
-            color: var(--text-light);
-            margin-bottom: 25px;
-            font-size: 0.9rem;
-        }
-
-        .login-btn {
-            background-color: var(--secondary);
-            color: white;
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 15px;
-            transition: background-color 0.3s, transform 0.2s;
-        }
-
-        .login-btn:hover { background-color: #D68910; }
-        .login-btn:active { transform: scale(0.97); }
-        .login-btn:disabled { background-color: #95A5A6; cursor: not-allowed; }
-        /* ------------------------------------- */
-
-        /* Splash Screen (Açılış Ekranı) */
-        #splash-screen {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, var(--primary), #2980B9);
-            color: white;
-            display: none; /* Giriş yapıldıktan sonra görünür olacak */
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            transition: opacity 1s ease-out;
-            text-align: center;
-            padding: 20px;
-        }
-
-        #splash-screen h1 {
-            font-size: 2.5rem;
-            margin-bottom: 20px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        }
-
-        #splash-screen p { font-size: 1.2rem; opacity: 0.9; }
-
-        /* Header & Controls */
-        header {
-            background-color: var(--card-bg);
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        header h2 { color: var(--primary); display: flex; align-items: center; gap: 10px;}
-        .student-badge { font-size: 0.8rem; background: var(--secondary); color: white; padding: 4px 10px; border-radius: 12px; font-weight: normal;}
-
-        .controls button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, background-color 0.2s;
-            margin-left: 10px;
-            color: white;
-        }
-
-        .controls button:active { transform: scale(0.95); }
-        #btn-save { background-color: var(--success); }
-        #btn-save:hover { background-color: #219653; }
-        #btn-undo { background-color: var(--secondary); }
-        #btn-undo:hover { background-color: #D68910; }
-        #btn-reset { background-color: var(--danger); }
-        #btn-reset:hover { background-color: #C0392B; }
-
-        /* Container & Grid */
-        .container {
-            max-width: 1200px;
-            margin: 30px auto;
-            padding: 0 20px;
-            display: none; /* Giriş yapıldıktan sonra görünür olacak */
-            flex-direction: column;
-            gap: 30px;
-        }
-
-        .day-card {
-            background: var(--card-bg);
-            border-radius: 15px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
-            overflow: hidden;
-            border-left: 5px solid var(--primary);
-        }
-
-        .day-header {
-            background-color: rgba(74, 144, 226, 0.1);
-            padding: 15px 20px;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary);
-            border-bottom: 1px solid #eee;
-        }
-
-        .hours-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            padding: 20px;
-        }
-
-        .hour-block {
-            background: #FAFAFA;
-            border-radius: 10px;
-            padding: 15px;
-            border: 1px solid #eee;
-            position: relative;
-        }
-
-        .time-badge {
-            display: inline-block;
-            background: var(--secondary);
-            color: white;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            margin-bottom: 10px;
-        }
-
-        .subject-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 10px;
-            color: var(--text-dark);
-        }
-
-        .form-group { margin-bottom: 12px; text-align: left; }
-        .form-group label {
-            display: block;
-            font-size: 0.85rem;
-            color: var(--text-light);
-            margin-bottom: 4px;
-            font-weight: 600;
-        }
-
-        input[type="text"], input[type="number"], textarea, select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            transition: border-color 0.3s;
-        }
-
-        input[type="text"]:focus, input[type="number"]:focus, textarea:focus, select:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-        .stats-grid input { text-align: center; }
-        .stats-grid label { text-align: center; }
-        textarea { resize: vertical; min-height: 60px; }
-
-        /* Bildirim Toast */
-        #toast {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: var(--text-dark);
-            color: white;
-            padding: 15px 25px;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-            transform: translateY(100px);
-            opacity: 0;
-            transition: all 0.3s ease;
-            z-index: 1000;
-        }
-        #toast.show { transform: translateY(0); opacity: 1; }
-        
-        @media (max-width: 768px) {
-            header { flex-direction: column; gap: 15px; text-align: center; }
-            .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
-            .controls button { margin: 0; }
-        }
-    </style>
-</head>
-<body>
-
-    <div id="login-overlay">
-        <div class="login-card">
-            <h2>Hoş Geldin!</h2>
-            <p>Ramazan çalışma programına ulaşmak için bilgilerini gir.</p>
-            <form id="login-form">
-                <div class="form-group">
-                    <input type="text" id="login-name" placeholder="Adın ve Soyadın" required>
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <div class="form-group" style="flex: 1;">
-                        <select id="login-class" required>
-                            <option value="" disabled selected>Sınıf</option>
-                            <option value="8">8. Sınıf</option>
-                            <option value="7">7. Sınıf</option>
-                            <option value="6">6. Sınıf</option>
-                            <option value="5">5. Sınıf</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <input type="number" id="login-no" placeholder="Okul No" required>
-                    </div>
-                </div>
-                <button type="submit" id="btn-login" class="login-btn">Programa Başla</button>
-            </form>
-        </div>
-    </div>
-
-    <div id="splash-screen">
-        <h1 id="quote-text">Harika işler başarmak için, harika bir başlangıç yap!</h1>
-        <p>Programın yükleniyor...</p>
-    </div>
-
-    <header style="display: none;" id="main-header">
-        <h2>
-            Gelişim Yolculuğu
-            <span id="header-student-info" class="student-badge"></span>
-        </h2>
-        <div class="controls">
-            <button id="btn-undo">↩ Geri Al</button>
-            <button id="btn-save">💾 Kaydet</button>
-            <button id="btn-reset">🔄 Sıfırla</button>
-        </div>
-    </header>
-
-    <div class="container" id="schedule-container"></div>
-
-    <div id="toast">İşlem başarılı!</div>
-
-    <script>
-        // --- GOOGLE SHEETS API BAĞLANTISI ---
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxAR1NFhHbFecZUmnYe_7jYuN00vGEMHYJT6W-HsdCTdf5cwHDSVye1YcYpIIHx1MIR6g/exec";
-        let currentUser = null;
-
-        // Motive edici sözler
-        const quotes = [
-            "Bugün yapacağın küçük bir çalışma, yarınki büyük başarının anahtarıdır.",
-            "Zorluklar seni durdurmak için değil, güçlendirmek içindir. Harika gidiyorsun!",
-            "Eksiklerini görmek zayıflık değil, gelişimin ilk adımıdır.",
-            "Pes etmediğin sürece asla kaybetmiş sayılmazsın.",
-            "Her yeni gün, daha iyi olman için yeni bir fırsattır.",
-            "Oruçlu olman iradeni güçlendirir; bu iradeyi derslerinde de kullan!",
-            "Adım adım ilerle. En uzun yolculuklar bile tek bir adımla başlar."
-        ];
-
-        // Ders Programı Taslağı
-        const schedulePlan = [
-            { day: 1, subjects: ["Türkçe", "Matematik", "İngilizce"] },
-            { day: 2, subjects: ["Fen Bilimleri", "Sosyal Bilgiler", "Matematik"] },
-            { day: 3, subjects: ["İngilizce", "Türkçe", "Din Kültürü"] },
-            { day: 4, subjects: ["Matematik", "Fen Bilimleri", "Sosyal Bilgiler"] },
-            { day: 5, subjects: ["Türkçe", "İngilizce", "Matematik"] },
-            { day: 6, subjects: ["Fen Bilimleri", "Sosyal Bilgiler", "Türkçe"] },
-            { day: 7, subjects: ["İngilizce", "Matematik", "Haftalık Genel Tekrar"] }
-        ];
-
-        const timeSlots = [
-            { label: "1. Saat (Öğleden Sonra)", desc: "Video Konu Anlatımı İzleme" },
-            { label: "2. Saat (İftara Doğru)", desc: "Öğrenilenleri Tekrar / Hafif Pratik" },
-            { label: "3. Saat (İftar Sonrası)", desc: "Soru Çözümü ve Test" }
-        ];
-
-        let stateHistory = [];
-
-        // DOM Yüklendiğinde
-        document.addEventListener("DOMContentLoaded", () => {
-            renderSchedule(); // Sadece arka planda arayüzü çizer, ama gizlidir.
-            document.getElementById("login-form").addEventListener("submit", handleLogin);
-            setupEventListeners();
-        });
-
-        // --- GİRİŞ VE VERİ ÇEKME İŞLEMİ ---
-        async function handleLogin(e) {
-            e.preventDefault();
-            const btn = document.getElementById("btn-login");
-            const name = document.getElementById("login-name").value;
-            const cls = document.getElementById("login-class").value;
-            const no = document.getElementById("login-no").value;
-
-            btn.innerText = "Verilerin Aranıyor...";
-            btn.disabled = true;
-
-            try {
-                // Google Sheets'ten eski kayıtları ara
-                const response = await fetch(`${SCRIPT_URL}?no=${no}&class=${cls}`);
-                const textResp = await response.text();
-                
-                try {
-                    const result = JSON.parse(textResp);
-                    if (result.status === "found") {
-                        const savedData = JSON.parse(result.data);
-                        applyState(savedData);
-                        stateHistory.push(savedData);
-                    } else {
-                        // Yeni öğrenci, boş geçmiş oluştur
-                        stateHistory.push(getCurrentState());
-                    }
-                } catch (parseErr) {
-                    console.log("JSON parse hatası (İlk kayıt olabilir)");
-                    stateHistory.push(getCurrentState());
-                }
-
-                // Öğrenci bilgisini kaydet
-                currentUser = { name, class: cls, no };
-                
-                // Başlık alanını güncelle
-                document.getElementById("header-student-info").innerText = `${name} (${cls}. Sınıf)`;
-
-                // Geçiş Efektleri
-                document.getElementById("login-overlay").style.display = "none";
-                showSplashScreen();
-
-            } catch (err) {
-                alert("İnternet bağlantısı kurulamadı. Lütfen tekrar deneyin.");
-                btn.innerText = "Programa Başla";
-                btn.disabled = false;
-            }
-        }
-
-        // Açılış ekranını göster ve gizle
-        function showSplashScreen() {
-            const splash = document.getElementById("splash-screen");
-            splash.style.display = "flex";
-            const quoteText = document.getElementById("quote-text");
-            const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-            quoteText.innerText = randomQuote;
-
-            setTimeout(() => {
-                splash.style.opacity = "0";
-                setTimeout(() => {
-                    splash.style.display = "none";
-                    // Ana arayüzü görünür yap
-                    document.getElementById("main-header").style.display = "flex";
-                    document.getElementById("schedule-container").style.display = "flex";
-                }, 1000);
-            }, 3000);
-        }
-
-        // Program arayüzünü oluştur
-        function renderSchedule() {
-            const container = document.getElementById("schedule-container");
-            let html = "";
-
-            schedulePlan.forEach((dayPlan, dayIndex) => {
-                html += `
-                <div class="day-card">
-                    <div class="day-header">${dayPlan.day}. Gün</div>
-                    <div class="hours-grid">
-                `;
-
-                dayPlan.subjects.forEach((subject, hourIndex) => {
-                    const idPrefix = `d${dayPlan.day}_h${hourIndex}`;
-                    html += `
-                        <div class="hour-block">
-                            <div class="time-badge">${timeSlots[hourIndex].label}</div>
-                            <div class="subject-title">${subject}</div>
-                            <div class="form-group">
-                                <label>Çalışılan Konu (${timeSlots[hourIndex].desc}):</label>
-                                <input type="text" id="${idPrefix}_topic" placeholder="Hangi konuyu çalıştın?">
-                            </div>
-                            <div class="stats-grid">
-                                <div class="form-group">
-                                    <label style="color: var(--success)">Doğru</label>
-                                    <input type="number" id="${idPrefix}_correct" min="0" placeholder="0">
-                                </div>
-                                <div class="form-group">
-                                    <label style="color: var(--danger)">Yanlış</label>
-                                    <input type="number" id="${idPrefix}_wrong" min="0" placeholder="0">
-                                </div>
-                                <div class="form-group">
-                                    <label style="color: var(--text-light)">Boş</label>
-                                    <input type="number" id="${idPrefix}_empty" min="0" placeholder="0">
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label>Öğretmenine / Kendine Notlar:</label>
-                                <textarea id="${idPrefix}_notes" placeholder="Anlamadığın yerleri veya formülleri buraya not al..."></textarea>
-                            </div>
-                        </div>
-                    `;
-                });
-
-                html += `</div></div>`;
-            });
-
-            container.innerHTML = html;
-        }
-
-        // Mevcut tüm input verilerini bir obje olarak al
-        function getCurrentState() {
-            const inputs = document.querySelectorAll("input, textarea");
-            const state = {};
-            inputs.forEach(input => {
-                // Login formu elemanlarını tabloya kaydetme
-                if(!input.id.includes("login")) {
-                    state[input.id] = input.value;
-                }
-            });
-            return state;
-        }
-
-        // Veriyi ekrana uygula
-        function applyState(state) {
-            const inputs = document.querySelectorAll("input, textarea");
-            inputs.forEach(input => {
-                if(!input.id.includes("login")) {
-                    if (state[input.id] !== undefined) {
-                        input.value = state[input.id];
-                    } else {
-                        input.value = "";
-                    }
-                }
-            });
-        }
-
-        // --- GOOGLE SHEETS'E KAYDETME ---
-        async function saveData() {
-            const currentState = getCurrentState();
-            
-            // Kullanıcıya anında hissiyat vermek için local storage ve history
-            localStorage.setItem("ramadanSchedule", JSON.stringify(currentState));
-            stateHistory.push(currentState);
-            if(stateHistory.length > 10) stateHistory.shift(); 
-            
-            // Buluta (Google Sheets) Gönderim
-            if (currentUser) {
-                const payload = {
-                    name: currentUser.name,
-                    class: currentUser.class,
-                    no: currentUser.no,
-                    state: currentState
-                };
-                
-                try {
-                    await fetch(SCRIPT_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        body: JSON.stringify(payload)
-                    });
-                } catch (e) {
-                    console.error("Buluta kayıt hatası");
-                }
-            }
-
-            showToast("Harika! Çalışmaların başarıyla buluta kaydedildi.");
-        }
-
-        // Geri Al işlevi
-        function undoChange() {
-            if (stateHistory.length > 1) {
-                stateHistory.pop(); // Mevcut durumu at
-                const previousState = stateHistory[stateHistory.length - 1]; // Bir öncekini al
-                applyState(previousState);
-                showToast("Son işlem geri alındı.");
-            } else {
-                showToast("Geri alınacak başka işlem yok!");
-            }
-        }
-
-        // Programı Sıfırla işlevi
-        function resetSchedule() {
-            if(confirm("Tüm yazdıkların silinecek ve sıfırdan başlayacaksın. Emin misin?")) {
-                const inputs = document.querySelectorAll("#schedule-container input, #schedule-container textarea");
-                inputs.forEach(input => input.value = "");
-                stateHistory = [getCurrentState()];
-                saveData(); // Buluttaki veriyi de sıfırla
-                showToast("Program başarıyla sıfırlandı. Yeni bir başlangıç!");
-            }
-        }
-
-        // Bildirim gösterme
-        function showToast(message) {
-            const toast = document.getElementById("toast");
-            toast.innerText = message;
-            toast.classList.add("show");
-            setTimeout(() => {
-                toast.classList.remove("show");
-            }, 3000);
-        }
-
-        // Buton dinleyicileri
-        function setupEventListeners() {
-            document.getElementById("btn-save").addEventListener("click", saveData);
-            document.getElementById("btn-undo").addEventListener("click", undoChange);
-            document.getElementById("btn-reset").addEventListener("click", resetSchedule);
-        }
     </script>
 </body>
 </html>
