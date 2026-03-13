@@ -3,6 +3,375 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dobby LGS - Dinamik Ramazan Koçu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600;700&display=swap');
+        
+        body { background-color: #0f172a; color: #f8fafc; margin: 0; font-family: 'Inter', sans-serif; }
+        .quote-font { font-family: 'Playfair Display', serif; }
+        
+        /* Animasyonlar */
+        .fade-in { animation: fadeIn 1s ease-in forwards; }
+        .fade-out { animation: fadeOut 1s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-10px); } }
+        
+        /* Kaydırma Çubuğu */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px;}
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        
+        /* Takvim Grid Sistemi */
+        .calendar-grid { display: grid; grid-template-columns: 80px repeat(7, minmax(120px, 1fr)); gap: 1px; background-color: #334155; border: 1px solid #334155; border-radius: 12px; overflow: hidden;}
+        .calendar-header { background-color: #1e293b; padding: 12px; text-align: center; font-weight: bold; font-size: 0.85rem; color: #e2e8f0; }
+        .calendar-cell { background-color: #0f172a; padding: 10px; min-height: 80px; display: flex; flex-direction: column; gap: 4px; transition: background-color 0.2s; }
+        .calendar-cell:hover { background-color: #1e293b; }
+        .calendar-time-label { background-color: #1e293b; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #94a3b8; font-weight: 600; border-right: 1px solid #334155;}
+        
+        /* PDF Yazdırma Ayarları */
+        .pdf-mode { background-color: white !important; color: black !important; }
+        .pdf-mode * { border-color: #ddd !important; }
+        .pdf-mode .calendar-cell { background-color: white !important; color: black !important; }
+        .pdf-mode .calendar-header, .pdf-mode .calendar-time-label { background-color: #f1f5f9 !important; color: black !important; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // Kendi Google Script Linkiniz
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxAR1NFhHbFecZUmnYe_7jYuN00vGEMHYJT6W-HsdCTdf5cwHDSVye1YcYpIIHx1MIR6g/exec";
+
+        const ALL_SUBJECTS = ["Türkçe", "Matematik", "Fen Bilimleri", "İngilizce", "T.C. İnkılap Tarihi", "Din Kültürü", "Genel Deneme"];
+        
+        const QUOTES = [
+            "Gecenin karanlığında aydınlanan zihinler, sabahın güneşinden daha parlaktır...",
+            "Zorluklar seni durdurmak için değil, ne kadar güçlü olduğunu göstermek içindir.",
+            "Sahurun bereketi, masandaki kalem sesine karışsın. Harika işler başaracaksın.",
+            "Bugün yapacağın her 30 dakikalık odaklanma, yarınki büyük zaferinin tuğlasıdır.",
+            "İraden en büyük gücündür. Oruçla bilenen iradeni, hayallerin için kullan."
+        ];
+
+        const App = () => {
+            const [view, setView] = useState("login"); // login, onboarding, dashboard
+            const [user, setUser] = useState(null);
+            const [loading, setLoading] = useState(false);
+            
+            // Veri Durumları
+            const [config, setConfig] = useState(null);
+            const [programData, setProgramData] = useState({});
+            
+            // Login Form
+            const [formData, setFormData] = useState({ name: '', class: '8', no: '' });
+            const [errorMsg, setErrorMsg] = useState("");
+
+            // Sihirbaz (Onboarding) State
+            const [wizBlocks, setWizBlocks] = useState(6); // 6 blok = 3 saat
+            const [wizTime, setWizTime] = useState("14:00");
+            const [wizSubjects, setWizSubjects] = useState(["Matematik", "Türkçe", "Fen Bilimleri"]);
+
+            // Sekme Durumu (daily / calendar)
+            const [activeTab, setActiveTab] = useState("daily");
+
+            // --- GİRİŞ İŞLEMİ ---
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                setLoading(true); setErrorMsg("");
+                try {
+                    const resp = await fetch(`${SCRIPT_URL}?no=${formData.no}&class=${formData.class}`);
+                    const textResp = await resp.text();
+                    try {
+                        const result = JSON.parse(textResp);
+                        if (result.status === "found") {
+                            const saved = JSON.parse(result.data);
+                            setProgramData(saved.progress || {});
+                            if (saved.config) {
+                                setConfig(saved.config);
+                                setView("dashboard");
+                            } else {
+                                setView("onboarding");
+                            }
+                        } else {
+                            setView("onboarding");
+                        }
+                        setUser(formData);
+                    } catch(e) { setErrorMsg("Kayıt okunamadı, sunucu hatası."); }
+                } catch (err) { setErrorMsg("İnternet bağlantını kontrol et miyav!"); } 
+                finally { setLoading(false); }
+            };
+
+            // --- BULUTA KAYDETME ---
+            const saveToCloud = async (newConfig, newProgress) => {
+                const payload = { ...user, state: { config: newConfig, progress: newProgress } };
+                try {
+                    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+                } catch (e) { console.error("Buluta kayıt hatası."); }
+            };
+
+            // --- DİNAMİK PROGRAM OLUŞTURUCU (30 dk bloklar + 10 dk mola) ---
+            const generatedSchedule = useMemo(() => {
+                if (!config) return [];
+                const days = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
+                const plan = [];
+                for (let d = 1; d <= 7; d++) {
+                    let blocks = [];
+                    let [h, m] = config.startTime.split(':').map(Number);
+                    for (let b = 0; b < config.blocksPerDay; b++) {
+                        let startStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+                        // 30 dk çalışma
+                        let endM = m + 30; let endH = h;
+                        if (endM >= 60) { endH++; endM -= 60; }
+                        let endStr = `${String(endH).padStart(2,'0')}:${String(endM).padStart(2,'0')}`;
+                        
+                        let subj = config.subjects[(d * config.blocksPerDay + b) % config.subjects.length];
+                        blocks.push({ id: `d${d}_b${b}`, start: startStr, end: endStr, subject: subj });
+                        
+                        // 10 dk mola
+                        m = endM + 10; h = endH;
+                        if (m >= 60) { h++; m -= 60; }
+                    }
+                    plan.push({ dayNum: d, dayName: days[d-1], blocks });
+                }
+                return plan;
+            }, [config]);
+
+            const updateProgress = (id, field, value) => {
+                const newData = { ...programData, [`${id}_${field}`]: value };
+                setProgramData(newData);
+                saveToCloud(config, newData);
+            };
+
+            // --- PDF DIŞA AKTARMA ---
+            const exportPDF = () => {
+                const element = document.getElementById('printable-area');
+                element.classList.add('pdf-mode'); // Beyaz arka plan sınıfı
+                
+                const opt = {
+                    margin:       10,
+                    filename:     `${user.name}_Programi.pdf`,
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { scale: 2, useCORS: true },
+                    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+                };
+
+                html2pdf().set(opt).from(element).save().then(() => {
+                    element.classList.remove('pdf-mode'); // Eski haline çevir
+                });
+            };
+
+            // --- BİLEŞEN: MOTİVASYON SÖZÜ (Animasyonlu) ---
+            const QuoteDisplay = () => {
+                const [qIdx, setQIdx] = useState(0);
+                const [fade, setFade] = useState("fade-in");
+                
+                useEffect(() => {
+                    const interval = setInterval(() => {
+                        setFade("fade-out");
+                        setTimeout(() => {
+                            setQIdx(prev => (prev + 1) % QUOTES.length);
+                            setFade("fade-in");
+                        }, 1000);
+                    }, 5000);
+                    return () => clearInterval(interval);
+                }, []);
+
+                return (
+                    <div className="text-center max-w-md mx-auto mb-10 min-h-[100px] flex items-center justify-center">
+                        <p className={`quote-font text-xl md:text-2xl text-yellow-500 italic ${fade}`}>"{QUOTES[qIdx]}"</p>
+                    </div>
+                );
+            };
+
+            // --- EKRAN 1: GİRİŞ ---
+            if (view === "login") return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-950 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
+                    <QuoteDisplay />
+                    <div className="bg-slate-900/80 backdrop-blur-md p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-800 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-600 to-yellow-400"></div>
+                        <div className="text-6xl mb-4 text-center">🐈‍⬛</div>
+                        <h1 className="text-2xl font-bold text-center text-white mb-2">Dobby ile Ramazan Koçluğu</h1>
+                        <p className="text-slate-400 text-sm mb-6 text-center">Bilgilerini gir, esnek programını oluşturalım.</p>
+                        
+                        {errorMsg && <div className="bg-red-900/30 border border-red-500 text-red-300 p-3 rounded-lg text-xs mb-4 text-center">{errorMsg}</div>}
+
+                        <form onSubmit={handleLogin} className="space-y-4">
+                            <input required placeholder="Ad Soyad" className="w-full bg-slate-950 p-4 rounded-xl outline-none border border-slate-800 focus:border-yellow-500 text-white transition-all" onChange={e => setFormData({...formData, name: e.target.value})} />
+                            <div className="flex gap-4">
+                                <select className="flex-1 bg-slate-950 p-4 rounded-xl border border-slate-800 text-slate-300 outline-none focus:border-yellow-500" onChange={e => setFormData({...formData, class: e.target.value})}>
+                                    <option value="8">8. Sınıf (LGS)</option>
+                                    <option value="7">7. Sınıf</option>
+                                    <option value="6">6. Sınıf</option>
+                                    <option value="5">5. Sınıf</option>
+                                </select>
+                                <input required type="number" placeholder="Okul No" className="flex-1 bg-slate-950 p-4 rounded-xl border border-slate-800 text-white outline-none focus:border-yellow-500" onChange={e => setFormData({...formData, no: e.target.value})} />
+                            </div>
+                            <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-yellow-600 to-yellow-500 text-black font-bold py-4 rounded-xl hover:from-yellow-500 hover:to-yellow-400 transition-all transform active:scale-95 shadow-lg shadow-yellow-500/20">
+                                {loading ? "Bağlanıyor..." : "Giriş Yap"}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+
+            // --- EKRAN 2: SİHİRBAZ (Esnek Planlama) ---
+            if (view === "onboarding") return (
+                <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950">
+                    <div className="bg-slate-900 p-8 rounded-3xl border border-slate-800 w-full max-w-xl shadow-2xl">
+                        <div className="text-4xl mb-6">⚙️ Dinamik Program Kurulumu</div>
+                        <p className="text-slate-400 mb-8">Dobby'nin sana özel bir program hazırlaması için birkaç soruyu yanıtla.</p>
+                        
+                        <div className="space-y-6">
+                            <div>
+                                <label className="block text-sm font-bold text-yellow-500 mb-2">1. Günde kaç blok (30 Dk) çalışmak istersin?</label>
+                                <div className="grid grid-cols-3 gap-3">
+                                    {[4, 6, 8].map(n => (
+                                        <button key={n} onClick={() => setWizBlocks(n)} className={`p-3 rounded-xl border font-bold transition-all ${wizBlocks === n ? 'bg-yellow-500 text-black border-yellow-500' : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600'}`}>
+                                            {n} Blok <span className="block text-xs font-normal">({n * 30 / 60} Saat)</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-yellow-500 mb-2">2. Bu hafta odaklanacağın dersler (Seç/Kaldır)</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {ALL_SUBJECTS.map(s => {
+                                        const isSel = wizSubjects.includes(s);
+                                        return (
+                                            <button key={s} onClick={() => {
+                                                if (isSel && wizSubjects.length > 1) setWizSubjects(wizSubjects.filter(x => x !== s));
+                                                else if (!isSel) setWizSubjects([...wizSubjects, s]);
+                                            }} className={`px-4 py-2 rounded-full text-sm border transition-all ${isSel ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-950 border-slate-800 text-slate-400'}`}>
+                                                {s} {isSel && "✓"}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-yellow-500 mb-2">3. Günlük çalışmaya saat kaçta başlayacaksın?</label>
+                                <input type="time" value={wizTime} onChange={(e) => setWizTime(e.target.value)} className="bg-slate-950 border border-slate-800 text-white p-3 rounded-xl w-full focus:outline-none focus:border-yellow-500" />
+                            </div>
+
+                            <button onClick={() => {
+                                const newConfig = { blocksPerDay: wizBlocks, subjects: wizSubjects, startTime: wizTime };
+                                setConfig(newConfig);
+                                saveToCloud(newConfig, programData);
+                                setView("dashboard");
+                            }} className="w-full bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-500 transition-all mt-4">
+                                Sihirbazı Tamamla ve Programı Çıkar ✨
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            // --- EKRAN 3: ANA KONTROL PANELİ (Takvim / Liste) ---
+            return (
+                <div className="max-w-7xl mx-auto p-4 md:p-8">
+                    <header className="flex flex-col md:flex-row justify-between items-center mb-8 bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-xl gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="text-4xl">🐈‍⬛</div>
+                            <div>
+                                <h2 className="text-xl font-bold text-yellow-500">{user.name}</h2>
+                                <p className="text-xs text-slate-400 uppercase tracking-widest">{user.class}. Sınıf • Dobby Özel Planı</p>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap gap-3 justify-center">
+                            <div className="bg-slate-950 p-1 rounded-xl flex border border-slate-800">
+                                <button onClick={() => setActiveTab("daily")} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'daily' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-white'}`}>Günlük Akış</button>
+                                <button onClick={() => setActiveTab("calendar")} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'calendar' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-white'}`}>Takvim</button>
+                            </div>
+                            <button onClick={exportPDF} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2">📄 PDF İndir</button>
+                            <button onClick={() => setView("onboarding")} className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl text-sm transition-all border border-slate-700">⚙️ Ayarlar</button>
+                        </div>
+                    </header>
+
+                    {/* PDF ALANI BAŞLANGICI */}
+                    <div id="printable-area" className="p-4 rounded-xl transition-colors duration-300">
+                        {activeTab === "daily" && (
+                            <div className="space-y-6">
+                                {generatedSchedule.map(day => (
+                                    <div key={day.dayNum} className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
+                                        <div className="bg-slate-800/50 p-4 border-b border-slate-800 flex justify-between items-center">
+                                            <h3 className="font-bold text-lg text-yellow-500">{day.dayNum}. Gün <span className="text-slate-400 text-sm font-normal">({day.dayName})</span></h3>
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
+                                            {day.blocks.map((block, idx) => (
+                                                <div key={block.id} className="bg-slate-950 border border-slate-800 p-4 rounded-xl flex flex-col gap-3 relative">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-xs font-bold bg-slate-800 text-slate-300 px-2 py-1 rounded-md">{idx+1}. Blok</span>
+                                                        <span className="text-xs font-mono text-yellow-600">{block.start} - {block.end}</span>
+                                                    </div>
+                                                    <h4 className="font-bold text-lg">{block.subject}</h4>
+                                                    
+                                                    <div className="grid grid-cols-3 gap-2 mt-2">
+                                                        <input type="number" placeholder="D" className="bg-slate-900 border border-slate-800 p-2 rounded-lg text-center text-xs text-green-400 focus:outline-none focus:border-green-500" value={programData[`${block.id}_D`] || ''} onChange={e => updateProgress(block.id, 'D', e.target.value)} title="Doğru"/>
+                                                        <input type="number" placeholder="Y" className="bg-slate-900 border border-slate-800 p-2 rounded-lg text-center text-xs text-red-400 focus:outline-none focus:border-red-500" value={programData[`${block.id}_Y`] || ''} onChange={e => updateProgress(block.id, 'Y', e.target.value)} title="Yanlış"/>
+                                                        <input type="number" placeholder="B" className="bg-slate-900 border border-slate-800 p-2 rounded-lg text-center text-xs text-slate-400 focus:outline-none focus:border-slate-500" value={programData[`${block.id}_B`] || ''} onChange={e => updateProgress(block.id, 'B', e.target.value)} title="Boş"/>
+                                                    </div>
+                                                    <input type="text" placeholder="Çalışılan Konu / Not" className="bg-slate-900 border border-slate-800 p-2 rounded-lg text-xs w-full mt-1 text-slate-300 focus:outline-none focus:border-yellow-500" value={programData[`${block.id}_not`] || ''} onChange={e => updateProgress(block.id, 'not', e.target.value)}/>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {activeTab === "calendar" && (
+                            <div className="overflow-x-auto pb-4 custom-scrollbar">
+                                <h3 className="text-xl font-bold mb-4 text-center text-yellow-500 print:text-black">Haftalık Çalışma Takvimi</h3>
+                                <div className="calendar-grid min-w-[900px]">
+                                    {/* Başlıklar */}
+                                    <div className="calendar-header">Saat</div>
+                                    {generatedSchedule.map(d => <div key={d.dayNum} className="calendar-header">{d.dayName}</div>)}
+                                    
+                                    {/* Satırlar (Zaman Blokları) */}
+                                    {Array.from({length: config.blocksPerDay}).map((_, blockIdx) => (
+                                        <React.Fragment key={blockIdx}>
+                                            <div className="calendar-time-label">
+                                                {generatedSchedule[0].blocks[blockIdx].start}
+                                            </div>
+                                            {generatedSchedule.map(day => {
+                                                const block = day.blocks[blockIdx];
+                                                const totalQ = (parseInt(programData[`${block.id}_D`])||0) + (parseInt(programData[`${block.id}_Y`])||0) + (parseInt(programData[`${block.id}_B`])||0);
+                                                return (
+                                                    <div key={block.id} className="calendar-cell">
+                                                        <span className="text-xs font-bold text-yellow-500">{block.subject}</span>
+                                                        {programData[`${block.id}_not`] && <span className="text-[10px] text-slate-400 leading-tight truncate">{programData[`${block.id}_not`]}</span>}
+                                                        {totalQ > 0 && <span className="mt-auto text-[9px] bg-green-900/40 text-green-400 px-1 py-0.5 rounded w-max inline-block">{totalQ} Soru Çözüldü</span>}
+                                                    </div>
+                                                );
+                                            })}
+                                        </React.Fragment>
+                                    ))}
+                                </div>
+                                <div className="mt-4 text-center text-xs text-slate-500">Not: Bloklar arası 10'ar dakika mola süresi eklenerek hesaplanmıştır.</div>
+                            </div>
+                        )}
+                    </div>
+                    {/* PDF ALANI BİTİŞİ */}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>7 Günlük Ramazan Çalışma Programı</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
