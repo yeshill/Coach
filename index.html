@@ -3,159 +3,565 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dobby LGS Koçu</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <title>7 Günlük Ramazan Çalışma Programı</title>
     <style>
-        body { background-color: #0f172a; color: #f8fafc; margin: 0; font-family: sans-serif; }
-        .locked-card { opacity: 0.6; pointer-events: none; filter: grayscale(1); position: relative; }
-        .locked-card::after { content: '🔒'; position: absolute; top: 10px; right: 10px; font-size: 1.2rem; }
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+        :root {
+            --primary: #4A90E2;
+            --secondary: #F39C12;
+            --bg-color: #F4F7F6;
+            --card-bg: #FFFFFF;
+            --text-dark: #2C3E50;
+            --text-light: #7F8C8D;
+            --success: #27AE60;
+            --danger: #E74C3C;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            padding-bottom: 50px;
+        }
+
+        /* --- YENİ EKLENEN GİRİŞ EKRANI CSS --- */
+        #login-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #2C3E50, #4A90E2);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .login-card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .login-card h2 {
+            color: var(--primary);
+            margin-bottom: 5px;
+            font-size: 1.8rem;
+        }
+
+        .login-card p {
+            color: var(--text-light);
+            margin-bottom: 25px;
+            font-size: 0.9rem;
+        }
+
+        .login-btn {
+            background-color: var(--secondary);
+            color: white;
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        .login-btn:hover { background-color: #D68910; }
+        .login-btn:active { transform: scale(0.97); }
+        .login-btn:disabled { background-color: #95A5A6; cursor: not-allowed; }
+        /* ------------------------------------- */
+
+        /* Splash Screen (Açılış Ekranı) */
+        #splash-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, var(--primary), #2980B9);
+            color: white;
+            display: none; /* Giriş yapıldıktan sonra görünür olacak */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 1s ease-out;
+            text-align: center;
+            padding: 20px;
+        }
+
+        #splash-screen h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        #splash-screen p { font-size: 1.2rem; opacity: 0.9; }
+
+        /* Header & Controls */
+        header {
+            background-color: var(--card-bg);
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header h2 { color: var(--primary); display: flex; align-items: center; gap: 10px;}
+        .student-badge { font-size: 0.8rem; background: var(--secondary); color: white; padding: 4px 10px; border-radius: 12px; font-weight: normal;}
+
+        .controls button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+            margin-left: 10px;
+            color: white;
+        }
+
+        .controls button:active { transform: scale(0.95); }
+        #btn-save { background-color: var(--success); }
+        #btn-save:hover { background-color: #219653; }
+        #btn-undo { background-color: var(--secondary); }
+        #btn-undo:hover { background-color: #D68910; }
+        #btn-reset { background-color: var(--danger); }
+        #btn-reset:hover { background-color: #C0392B; }
+
+        /* Container & Grid */
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+            display: none; /* Giriş yapıldıktan sonra görünür olacak */
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .day-card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            overflow: hidden;
+            border-left: 5px solid var(--primary);
+        }
+
+        .day-header {
+            background-color: rgba(74, 144, 226, 0.1);
+            padding: 15px 20px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            border-bottom: 1px solid #eee;
+        }
+
+        .hours-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .hour-block {
+            background: #FAFAFA;
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid #eee;
+            position: relative;
+        }
+
+        .time-badge {
+            display: inline-block;
+            background: var(--secondary);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .subject-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--text-dark);
+        }
+
+        .form-group { margin-bottom: 12px; text-align: left; }
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        input[type="text"], input[type="number"], textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .stats-grid input { text-align: center; }
+        .stats-grid label { text-align: center; }
+        textarea { resize: vertical; min-height: 60px; }
+
+        /* Bildirim Toast */
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--text-dark);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        #toast.show { transform: translateY(0); opacity: 1; }
+        
+        @media (max-width: 768px) {
+            header { flex-direction: column; gap: 15px; text-align: center; }
+            .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+            .controls button { margin: 0; }
+        }
     </style>
 </head>
 <body>
-    <div id="root"></div>
 
-    <script type="text/babel">
-        const { useState, useEffect } = React;
-
-        // Kendi E-Tablo bağlantınız (Sizin paylaştığınız link eklendi)
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxAR1NFhHbFecZUmnYe_7jYuN00vGEMHYJT6W-HsdCTdf5cwHDSVye1YcYpIIHx1MIR6g/exec";
-
-        const App = () => {
-            const [user, setUser] = useState(null);
-            const [loading, setLoading] = useState(false);
-            const [program, setProgram] = useState({});
-            const [editMode, setEditMode] = useState(false);
-            const [customSubjects, setCustomSubjects] = useState(["Türkçe", "Matematik", "Fen", "İngilizce", "Sosyal", "Din"]);
-            const [formData, setFormData] = useState({ name: '', class: '8', no: '' });
-            const [errorMessage, setErrorMessage] = useState("");
-
-            const handleLogin = async (e) => {
-                e.preventDefault();
-                setLoading(true);
-                setErrorMessage("");
-                
-                try {
-                    const resp = await fetch(`${SCRIPT_URL}?no=${formData.no}&class=${formData.class}`);
-                    const textResp = await resp.text();
-                    
-                    try {
-                        const result = JSON.parse(textResp);
-                        if (result.status === "found") {
-                            const saved = JSON.parse(result.data);
-                            setProgram(saved.activities || {});
-                            setCustomSubjects(saved.subjects || customSubjects);
-                        }
-                        setUser(formData);
-                    } catch (parseError) {
-                        setErrorMessage("Google E-Tablo'ya ulaşılamadı. 'Erişimi Olanlar: Herkes' ayarını kontrol edin veya Gizli Sekme'de deneyin.");
-                    }
-                } catch (err) {
-                    setErrorMessage("İnternet bağlantısı kurulamadı. Dobby üzgün... Miyav!");
-                } finally { 
-                    setLoading(false); 
-                }
-            };
-
-            const saveToCloud = async (newProg, newSubs) => {
-                const data = { ...user, state: { activities: newProg, subjects: newSubs } };
-                try {
-                    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) });
-                } catch (e) { 
-                    console.error("Kayıt işlemi başarısız oldu."); 
-                }
-            };
-
-            const updateCell = (day, idx, val) => {
-                const newProg = { ...program, [`day${day}_sub${idx}`]: val };
-                setProgram(newProg);
-                saveToCloud(newProg, customSubjects);
-            };
-
-            if (!user) {
-                return (
-                    <div className="min-h-screen flex items-center justify-center p-6">
-                        <div className="bg-slate-800 p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-700 text-center">
-                            <div className="text-7xl mb-6">🐈‍⬛</div>
-                            <h1 className="text-2xl font-bold text-yellow-500 mb-6">Dobby Koçluk Girişi</h1>
-                            
-                            {errorMessage && (
-                                <div className="bg-red-900/50 border border-red-500 text-red-200 p-3 rounded-lg text-sm mb-4">
-                                    {errorMessage}
-                                </div>
-                            )}
-
-                            <form onSubmit={handleLogin} className="space-y-4">
-                                <input required placeholder="Ad Soyad" className="w-full bg-slate-900 p-4 rounded-xl outline-none border border-slate-700 focus:border-yellow-500" onChange={e => setFormData({...formData, name: e.target.value})} />
-                                <div className="flex gap-4">
-                                    <select className="flex-1 bg-slate-900 p-4 rounded-xl border border-slate-700 text-white" onChange={e => setFormData({...formData, class: e.target.value})}>
-                                        <option value="8">8. Sınıf (LGS)</option>
-                                        <option value="7">7. Sınıf</option>
-                                        <option value="6">6. Sınıf</option>
-                                        <option value="5">5. Sınıf</option>
-                                    </select>
-                                    <input required type="number" placeholder="No" className="flex-1 bg-slate-900 p-4 rounded-xl border border-slate-700 text-white" onChange={e => setFormData({...formData, no: e.target.value})} />
-                                </div>
-                                <button type="submit" disabled={loading} className="w-full bg-yellow-500 text-black font-bold py-4 rounded-xl hover:bg-yellow-400">
-                                    {loading ? "Bağlanıyor..." : "Giriş Yap"}
-                                </button>
-                            </form>
-                        </div>
+    <div id="login-overlay">
+        <div class="login-card">
+            <h2>Hoş Geldin!</h2>
+            <p>Ramazan çalışma programına ulaşmak için bilgilerini gir.</p>
+            <form id="login-form">
+                <div class="form-group">
+                    <input type="text" id="login-name" placeholder="Adın ve Soyadın" required>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex: 1;">
+                        <select id="login-class" required>
+                            <option value="" disabled selected>Sınıf</option>
+                            <option value="8">8. Sınıf</option>
+                            <option value="7">7. Sınıf</option>
+                            <option value="6">6. Sınıf</option>
+                            <option value="5">5. Sınıf</option>
+                        </select>
                     </div>
-                );
-            }
-
-            const currentDay = new Date().getDay() === 0 ? 7 : new Date().getDay();
-
-            return (
-                <div className="max-w-7xl mx-auto p-4 md:p-8">
-                    <header className="flex justify-between items-center mb-8 bg-slate-800 p-6 rounded-3xl border border-slate-700">
-                        <div className="flex items-center gap-4">
-                            <div className="text-4xl">🐈‍⬛</div>
-                            <div>
-                                <h2 className="text-xl font-bold text-yellow-500">{user.name}</h2>
-                                <p className="text-xs text-slate-400">{user.class}. Sınıf Maratonu</p>
-                            </div>
-                        </div>
-                        <button onClick={() => setEditMode(!editMode)} className="bg-slate-700 px-4 py-2 rounded-xl text-xs hover:bg-slate-600 transition-colors">
-                            {editMode ? "Değişiklikleri Kaydet" : "Ders İsimlerini Düzenle"}
-                        </button>
-                    </header>
-
-                    <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-                        {[1, 2, 3, 4, 5, 6, 7].map(day => (
-                            <div key={day} className={`bg-slate-800 p-4 rounded-2xl border ${day === currentDay ? 'border-yellow-500 ring-1 ring-yellow-500/50 scale-105' : 'border-slate-700'} ${day < currentDay ? 'locked-card' : ''}`}>
-                                <h3 className="text-center font-bold mb-4 text-sm">{day}. GÜN</h3>
-                                <div className="space-y-4">
-                                    {customSubjects.map((sub, idx) => (
-                                        <div key={idx}>
-                                            {editMode ? (
-                                                <input value={sub} className="w-full bg-slate-900 text-xs p-2 rounded border border-slate-700 text-white mb-1" onChange={e => {
-                                                    const n = [...customSubjects]; 
-                                                    n[idx] = e.target.value;
-                                                    setCustomSubjects(n); 
-                                                    saveToCloud(program, n);
-                                                }} />
-                                            ) : (
-                                                <label className="text-[10px] text-slate-400 block mb-1 font-bold uppercase">{sub}</label>
-                                            )}
-                                            <input type="number" placeholder="Soru Sayısı" className="w-full bg-slate-900 p-2 rounded-lg text-xs outline-none focus:ring-1 ring-yellow-500 text-white" 
-                                                value={program[`day${day}_sub${idx}`] || ''}
-                                                onChange={e => updateCell(day, idx, e.target.value)} />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
+                    <div class="form-group" style="flex: 1;">
+                        <input type="number" id="login-no" placeholder="Okul No" required>
                     </div>
                 </div>
-            );
-        };
+                <button type="submit" id="btn-login" class="login-btn">Programa Başla</button>
+            </form>
+        </div>
+    </div>
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+    <div id="splash-screen">
+        <h1 id="quote-text">Harika işler başarmak için, harika bir başlangıç yap!</h1>
+        <p>Programın yükleniyor...</p>
+    </div>
+
+    <header style="display: none;" id="main-header">
+        <h2>
+            Gelişim Yolculuğu
+            <span id="header-student-info" class="student-badge"></span>
+        </h2>
+        <div class="controls">
+            <button id="btn-undo">↩ Geri Al</button>
+            <button id="btn-save">💾 Kaydet</button>
+            <button id="btn-reset">🔄 Sıfırla</button>
+        </div>
+    </header>
+
+    <div class="container" id="schedule-container"></div>
+
+    <div id="toast">İşlem başarılı!</div>
+
+    <script>
+        // --- GOOGLE SHEETS API BAĞLANTISI ---
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxAR1NFhHbFecZUmnYe_7jYuN00vGEMHYJT6W-HsdCTdf5cwHDSVye1YcYpIIHx1MIR6g/exec";
+        let currentUser = null;
+
+        // Motive edici sözler
+        const quotes = [
+            "Bugün yapacağın küçük bir çalışma, yarınki büyük başarının anahtarıdır.",
+            "Zorluklar seni durdurmak için değil, güçlendirmek içindir. Harika gidiyorsun!",
+            "Eksiklerini görmek zayıflık değil, gelişimin ilk adımıdır.",
+            "Pes etmediğin sürece asla kaybetmiş sayılmazsın.",
+            "Her yeni gün, daha iyi olman için yeni bir fırsattır.",
+            "Oruçlu olman iradeni güçlendirir; bu iradeyi derslerinde de kullan!",
+            "Adım adım ilerle. En uzun yolculuklar bile tek bir adımla başlar."
+        ];
+
+        // Ders Programı Taslağı
+        const schedulePlan = [
+            { day: 1, subjects: ["Türkçe", "Matematik", "İngilizce"] },
+            { day: 2, subjects: ["Fen Bilimleri", "Sosyal Bilgiler", "Matematik"] },
+            { day: 3, subjects: ["İngilizce", "Türkçe", "Din Kültürü"] },
+            { day: 4, subjects: ["Matematik", "Fen Bilimleri", "Sosyal Bilgiler"] },
+            { day: 5, subjects: ["Türkçe", "İngilizce", "Matematik"] },
+            { day: 6, subjects: ["Fen Bilimleri", "Sosyal Bilgiler", "Türkçe"] },
+            { day: 7, subjects: ["İngilizce", "Matematik", "Haftalık Genel Tekrar"] }
+        ];
+
+        const timeSlots = [
+            { label: "1. Saat (Öğleden Sonra)", desc: "Video Konu Anlatımı İzleme" },
+            { label: "2. Saat (İftara Doğru)", desc: "Öğrenilenleri Tekrar / Hafif Pratik" },
+            { label: "3. Saat (İftar Sonrası)", desc: "Soru Çözümü ve Test" }
+        ];
+
+        let stateHistory = [];
+
+        // DOM Yüklendiğinde
+        document.addEventListener("DOMContentLoaded", () => {
+            renderSchedule(); // Sadece arka planda arayüzü çizer, ama gizlidir.
+            document.getElementById("login-form").addEventListener("submit", handleLogin);
+            setupEventListeners();
+        });
+
+        // --- GİRİŞ VE VERİ ÇEKME İŞLEMİ ---
+        async function handleLogin(e) {
+            e.preventDefault();
+            const btn = document.getElementById("btn-login");
+            const name = document.getElementById("login-name").value;
+            const cls = document.getElementById("login-class").value;
+            const no = document.getElementById("login-no").value;
+
+            btn.innerText = "Verilerin Aranıyor...";
+            btn.disabled = true;
+
+            try {
+                // Google Sheets'ten eski kayıtları ara
+                const response = await fetch(`${SCRIPT_URL}?no=${no}&class=${cls}`);
+                const textResp = await response.text();
+                
+                try {
+                    const result = JSON.parse(textResp);
+                    if (result.status === "found") {
+                        const savedData = JSON.parse(result.data);
+                        applyState(savedData);
+                        stateHistory.push(savedData);
+                    } else {
+                        // Yeni öğrenci, boş geçmiş oluştur
+                        stateHistory.push(getCurrentState());
+                    }
+                } catch (parseErr) {
+                    console.log("JSON parse hatası (İlk kayıt olabilir)");
+                    stateHistory.push(getCurrentState());
+                }
+
+                // Öğrenci bilgisini kaydet
+                currentUser = { name, class: cls, no };
+                
+                // Başlık alanını güncelle
+                document.getElementById("header-student-info").innerText = `${name} (${cls}. Sınıf)`;
+
+                // Geçiş Efektleri
+                document.getElementById("login-overlay").style.display = "none";
+                showSplashScreen();
+
+            } catch (err) {
+                alert("İnternet bağlantısı kurulamadı. Lütfen tekrar deneyin.");
+                btn.innerText = "Programa Başla";
+                btn.disabled = false;
+            }
+        }
+
+        // Açılış ekranını göster ve gizle
+        function showSplashScreen() {
+            const splash = document.getElementById("splash-screen");
+            splash.style.display = "flex";
+            const quoteText = document.getElementById("quote-text");
+            const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+            quoteText.innerText = randomQuote;
+
+            setTimeout(() => {
+                splash.style.opacity = "0";
+                setTimeout(() => {
+                    splash.style.display = "none";
+                    // Ana arayüzü görünür yap
+                    document.getElementById("main-header").style.display = "flex";
+                    document.getElementById("schedule-container").style.display = "flex";
+                }, 1000);
+            }, 3000);
+        }
+
+        // Program arayüzünü oluştur
+        function renderSchedule() {
+            const container = document.getElementById("schedule-container");
+            let html = "";
+
+            schedulePlan.forEach((dayPlan, dayIndex) => {
+                html += `
+                <div class="day-card">
+                    <div class="day-header">${dayPlan.day}. Gün</div>
+                    <div class="hours-grid">
+                `;
+
+                dayPlan.subjects.forEach((subject, hourIndex) => {
+                    const idPrefix = `d${dayPlan.day}_h${hourIndex}`;
+                    html += `
+                        <div class="hour-block">
+                            <div class="time-badge">${timeSlots[hourIndex].label}</div>
+                            <div class="subject-title">${subject}</div>
+                            <div class="form-group">
+                                <label>Çalışılan Konu (${timeSlots[hourIndex].desc}):</label>
+                                <input type="text" id="${idPrefix}_topic" placeholder="Hangi konuyu çalıştın?">
+                            </div>
+                            <div class="stats-grid">
+                                <div class="form-group">
+                                    <label style="color: var(--success)">Doğru</label>
+                                    <input type="number" id="${idPrefix}_correct" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label style="color: var(--danger)">Yanlış</label>
+                                    <input type="number" id="${idPrefix}_wrong" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label style="color: var(--text-light)">Boş</label>
+                                    <input type="number" id="${idPrefix}_empty" min="0" placeholder="0">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Öğretmenine / Kendine Notlar:</label>
+                                <textarea id="${idPrefix}_notes" placeholder="Anlamadığın yerleri veya formülleri buraya not al..."></textarea>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `</div></div>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Mevcut tüm input verilerini bir obje olarak al
+        function getCurrentState() {
+            const inputs = document.querySelectorAll("input, textarea");
+            const state = {};
+            inputs.forEach(input => {
+                // Login formu elemanlarını tabloya kaydetme
+                if(!input.id.includes("login")) {
+                    state[input.id] = input.value;
+                }
+            });
+            return state;
+        }
+
+        // Veriyi ekrana uygula
+        function applyState(state) {
+            const inputs = document.querySelectorAll("input, textarea");
+            inputs.forEach(input => {
+                if(!input.id.includes("login")) {
+                    if (state[input.id] !== undefined) {
+                        input.value = state[input.id];
+                    } else {
+                        input.value = "";
+                    }
+                }
+            });
+        }
+
+        // --- GOOGLE SHEETS'E KAYDETME ---
+        async function saveData() {
+            const currentState = getCurrentState();
+            
+            // Kullanıcıya anında hissiyat vermek için local storage ve history
+            localStorage.setItem("ramadanSchedule", JSON.stringify(currentState));
+            stateHistory.push(currentState);
+            if(stateHistory.length > 10) stateHistory.shift(); 
+            
+            // Buluta (Google Sheets) Gönderim
+            if (currentUser) {
+                const payload = {
+                    name: currentUser.name,
+                    class: currentUser.class,
+                    no: currentUser.no,
+                    state: currentState
+                };
+                
+                try {
+                    await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        body: JSON.stringify(payload)
+                    });
+                } catch (e) {
+                    console.error("Buluta kayıt hatası");
+                }
+            }
+
+            showToast("Harika! Çalışmaların başarıyla buluta kaydedildi.");
+        }
+
+        // Geri Al işlevi
+        function undoChange() {
+            if (stateHistory.length > 1) {
+                stateHistory.pop(); // Mevcut durumu at
+                const previousState = stateHistory[stateHistory.length - 1]; // Bir öncekini al
+                applyState(previousState);
+                showToast("Son işlem geri alındı.");
+            } else {
+                showToast("Geri alınacak başka işlem yok!");
+            }
+        }
+
+        // Programı Sıfırla işlevi
+        function resetSchedule() {
+            if(confirm("Tüm yazdıkların silinecek ve sıfırdan başlayacaksın. Emin misin?")) {
+                const inputs = document.querySelectorAll("#schedule-container input, #schedule-container textarea");
+                inputs.forEach(input => input.value = "");
+                stateHistory = [getCurrentState()];
+                saveData(); // Buluttaki veriyi de sıfırla
+                showToast("Program başarıyla sıfırlandı. Yeni bir başlangıç!");
+            }
+        }
+
+        // Bildirim gösterme
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+            toast.innerText = message;
+            toast.classList.add("show");
+            setTimeout(() => {
+                toast.classList.remove("show");
+            }, 3000);
+        }
+
+        // Buton dinleyicileri
+        function setupEventListeners() {
+            document.getElementById("btn-save").addEventListener("click", saveData);
+            document.getElementById("btn-undo").addEventListener("click", undoChange);
+            document.getElementById("btn-reset").addEventListener("click", resetSchedule);
+        }
     </script>
 </body>
 </html>
