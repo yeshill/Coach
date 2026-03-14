@@ -9,7 +9,6 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600;700&display=swap');
@@ -27,7 +26,6 @@
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
         @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* Kedi Süzülme Efekti */
         @keyframes float {
             0% { transform: translateY(0px); }
             50% { transform: translateY(-8px); }
@@ -44,21 +42,21 @@
         .calendar-cell:hover { background-color: #0f172a; }
         .calendar-time-label { background-color: #0f172a; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #94a3b8; font-weight: 600; border-right: 1px solid #1e293b; }
         
-        .pdf-mode { background-color: white !important; color: black !important; padding: 20px !important; }
-        .pdf-mode * { border-color: #ccc !important; }
-        .pdf-mode .bg-slate-900, .pdf-mode .bg-slate-950, .pdf-mode .bg-slate-800 { background-color: white !important; }
-        .pdf-mode .text-slate-300, .pdf-mode .text-slate-400, .pdf-mode .text-white { color: #333 !important; }
-        .pdf-mode input, .pdf-mode textarea, .pdf-mode select { border: 1px solid #ddd !important; color: black !important; background: white !important; }
-        .pdf-mode .calendar-cell { background-color: white !important; color: black !important; }
-        .pdf-mode .calendar-header, .pdf-mode .calendar-time-label { background-color: #f8fafc !important; color: black !important; }
-        .pdf-mode svg { filter: drop-shadow(0 0 0 white) !important; }
-        .pdf-mode button { display: none !important; }
-        
         .select-arrow { appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23eab308' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 10px center; background-size: 16px; padding-right: 30px; }
         
         input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #eab308; cursor: pointer; margin-top: -6px; box-shadow: 0 0 5px rgba(234,179,8,0.5); }
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #334155; border-radius: 2px; }
+
+        .guide-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 30px;
+            border-width: 10px 10px 0;
+            border-style: solid;
+            border-color: #eab308 transparent transparent transparent;
+        }
     </style>
 </head>
 <body>
@@ -76,83 +74,38 @@
             "Bugün yapacağın her 30 dakikalık odaklanma, yarınki büyük zaferinin tuğlasıdır."
         ];
 
-        // --- TAMAMI VEKTÖREL TOMBUL BOMBAY KEDİSİ ---
         const BombayCat = ({ className = "w-24 h-24", float = false }) => (
-            <svg viewBox="0 0 200 200" 
-                 className={`${className} drop-shadow-[0_0_15px_rgba(234,179,8,0.3)] ${float ? 'animate-float' : ''} transition-transform duration-300 hover:scale-105`} 
-                 xmlns="http://www.w3.org/2000/svg">
-                {/* Arka plan / Gövde-Boyun */}
+            <svg viewBox="0 0 200 200" className={`${className} drop-shadow-[0_0_15px_rgba(234,179,8,0.3)] ${float ? 'animate-float' : ''} transition-transform duration-300 hover:scale-105`} xmlns="http://www.w3.org/2000/svg">
                 <path d="M45 150 Q30 200 20 200 L180 200 Q170 200 155 150 Z" fill="#0a0a0c"/>
-                
-                {/* Sol Kulak */}
                 <path d="M40 85 Q15 25 45 20 Q70 30 80 60 Z" fill="#0a0a0c"/>
                 <path d="M45 80 Q28 35 46 30 Q62 40 72 60 Z" fill="#1f1f24"/>
-                
-                {/* Sağ Kulak */}
                 <path d="M160 85 Q185 25 155 20 Q130 30 120 60 Z" fill="#0a0a0c"/>
                 <path d="M155 80 Q172 35 154 30 Q138 40 128 60 Z" fill="#1f1f24"/>
-
-                {/* Kafa Yapısı */}
                 <ellipse cx="100" cy="115" rx="75" ry="65" fill="#0f0f11"/>
-                
-                {/* Tombul yanaklar için gölgeler */}
                 <ellipse cx="65" cy="135" rx="25" ry="20" fill="#151518"/>
                 <ellipse cx="135" cy="135" rx="25" ry="20" fill="#151518"/>
-
-                {/* Burun Köprüsü */}
                 <path d="M85 95 Q100 90 115 95 L106 122 L94 122 Z" fill="#121215"/>
-
-                {/* Sol Göz */}
                 <circle cx="65" cy="105" r="22" fill="#000000"/>
-                <circle cx="65" cy="105" r="20" fill="#eab308"/> {/* Orijinal sarı renk Tailwind ile uyumlu eab308 yapıldı */}
+                <circle cx="65" cy="105" r="20" fill="#eab308"/> 
                 <circle cx="65" cy="105" r="11" fill="#000000"/>
                 <circle cx="60" cy="98" r="5" fill="#FFFFFF"/>
                 <circle cx="72" cy="112" r="2" fill="#FFFFFF" opacity="0.6"/>
-
-                {/* Sağ Göz */}
                 <circle cx="135" cy="105" r="22" fill="#000000"/>
                 <circle cx="135" cy="105" r="20" fill="#eab308"/>
                 <circle cx="135" cy="105" r="11" fill="#000000"/>
                 <circle cx="130" cy="98" r="5" fill="#FFFFFF"/>
                 <circle cx="142" cy="112" r="2" fill="#FFFFFF" opacity="0.6"/>
-
-                {/* Burun */}
                 <path d="M93 125 Q100 122 107 125 L104 130 Q100 132 96 130 Z" fill="#000000"/>
                 <ellipse cx="100" cy="126" rx="3" ry="1.5" fill="#2a2a2e"/>
-
-                {/* Ağız */}
                 <path d="M100 131 L100 138 M100 138 Q88 145 80 136 M100 138 Q112 145 120 136" stroke="#111" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
-                
-                {/* Sol Bıyıklar */}
                 <path d="M70 135 Q40 130 15 138 M70 142 Q35 145 10 155 M70 148 Q40 158 20 170" stroke="#4a4a4e" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
-                
-                {/* Sağ Bıyıklar */}
                 <path d="M130 135 Q160 130 185 138 M130 142 Q165 145 190 155 M130 148 Q160 158 180 170" stroke="#4a4a4e" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
-
-                {/* Göz Üstü Kaş/Noktalar */}
                 <circle cx="65" cy="72" r="1.5" fill="#4a4a4e"/>
                 <circle cx="55" cy="76" r="1.5" fill="#4a4a4e"/>
                 <circle cx="135" cy="72" r="1.5" fill="#4a4a4e"/>
                 <circle cx="145" cy="76" r="1.5" fill="#4a4a4e"/>
             </svg>
         );
-
-        const QuoteDisplay = () => {
-            const [qIdx, setQIdx] = useState(Math.floor(Math.random() * QUOTES.length));
-            const [fade, setFade] = useState("fade-in");
-            useEffect(() => {
-                const interval = setInterval(() => {
-                    setFade("fade-out");
-                    setTimeout(() => { setQIdx(prev => (prev + 1) % QUOTES.length); setFade("fade-in"); }, 800);
-                }, 5000);
-                return () => clearInterval(interval);
-            }, []);
-            return (
-                <div className="text-center max-w-lg mx-auto mb-8 min-h-[80px] flex items-center justify-center">
-                    <p className={`quote-font text-xl md:text-2xl text-yellow-500 italic ${fade}`}>"{QUOTES[qIdx]}"</p>
-                </div>
-            );
-        };
 
         const App = () => {
             const [view, setView] = useState("login"); 
@@ -165,7 +118,6 @@
             const [subjects, setSubjects] = useState(INITIAL_SUBJECTS);
             
             const [formData, setFormData] = useState({ name: '', class: '8', no: '' });
-            
             const [wizBlocks, setWizBlocks] = useState(6);
             const [wizSubjects, setWizSubjects] = useState(["Matematik", "Türkçe", "Fen Bilimleri"]);
             const [wizSlots, setWizSlots] = useState({ sahur: false, sabah: true, ogle: true, aksam: true });
@@ -173,12 +125,13 @@
             
             const [activeTab, setActiveTab] = useState("daily");
             const [activeDay, setActiveDay] = useState(1); 
-            const [guideStep, setGuideStep] = useState(0);
+            const [guideStep, setGuideStep] = useState(-1);
+            const [dontShowGuideAgain, setDontShowGuideAgain] = useState(false);
 
             const playMeow = () => {
                 const audio = new Audio("https://upload.wikimedia.org/wikipedia/commons/5/53/Meow.ogg");
                 audio.volume = 0.5;
-                audio.play().catch(e => console.log("Ses engellendi."));
+                audio.play().catch(e => {});
             };
 
             const handleLogin = async (e) => {
@@ -203,10 +156,15 @@
                             setProgramData(savedData.progress || {});
                             if(savedData.subjects) setSubjects(savedData.subjects);
                             setView("dashboard");
+                            
+                            // Bir daha gösterme kutucuğu işaretli değilse rehberi aç
+                            if (localStorage.getItem("dobby_hide_guide") !== "true") {
+                                setGuideStep(0);
+                            }
                         } else {
                             setView("guide");
                         }
-                    }, 3500);
+                    }, 3000);
 
                 } catch (err) { 
                     setErrorMsg("Bağlantı kurulamadı. İnternetini kontrol et!"); 
@@ -225,7 +183,6 @@
                     newData[`${id}_telafi`] = false;
                 }
                 setProgramData(newData);
-                saveToCloud(config, newData, subjects);
             };
 
             const updateSubject = (id, value) => {
@@ -234,57 +191,41 @@
                 saveToCloud(config, newData, subjects);
             };
 
-            const addDelay = (id, mins) => {
-                const currentDelay = parseInt(programData[`${id}_delay`]) || 0;
-                updateProgress(id, 'delay', currentDelay + mins);
-            };
-
             const generatedSchedule = useMemo(() => {
                 if (!config || !config.slots) return [];
                 const days = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
                 const plan = [];
-                
                 for (let d = 1; d <= 7; d++) {
                     let blocks = [];
                     let blockCounter = 0;
                     let extraBlocks = []; 
-                    
                     const activeSlots = config.slots; 
                     const blocksPerSlot = Math.floor(config.blocksPerDay / activeSlots.length);
                     const remainder = config.blocksPerDay % activeSlots.length;
-
                     activeSlots.forEach((slot, sIdx) => {
                         let [h, m] = slot.time.split(':').map(Number);
                         let slotBlocks = blocksPerSlot + (sIdx < remainder ? 1 : 0);
-                        
                         for (let b = 0; b < slotBlocks; b++) {
                             const blockId = `d${d}_b${blockCounter}`;
-                            
                             const delayMins = parseInt(programData[`${blockId}_delay`]) || 0;
                             if (delayMins > 0) {
                                 m += delayMins;
                                 if (m >= 60) { h += Math.floor(m/60); m %= 60; }
                             }
-
                             let startStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
                             let endM = m + 30; let endH = h;
                             if (endM >= 60) { endH += Math.floor(endM/60); endM %= 60; }
                             let endStr = `${String(endH).padStart(2,'0')}:${String(endM).padStart(2,'0')}`;
-                            
                             let subj = config.subjects[blockCounter % config.subjects.length];
-                            
                             blocks.push({ id: blockId, slotName: slot.name, start: startStr, end: endStr, defaultSubject: subj, isTelafi: false });
-                            
                             m = endM + 10; h = endH;
                             if (m >= 60) { h += Math.floor(m/60); m %= 60; }
-
                             if (programData[`${blockId}_telafi`]) {
                                 extraBlocks.push({ defaultSubject: subj + " (Telafi)", originalId: blockId });
                             }
                             blockCounter++;
                         }
                     });
-
                     if (extraBlocks.length > 0) {
                         let [th, tm] = [22, 0]; 
                         extraBlocks.forEach((tb, tidx) => {
@@ -292,9 +233,7 @@
                             let endM = tm + 30; let endH = th;
                             if (endM >= 60) { endH += Math.floor(endM/60); endM %= 60; }
                             let endStr = `${String(endH).padStart(2,'0')}:${String(endM).padStart(2,'0')}`;
-
                             blocks.push({ id: `d${d}_telafi_${tidx}`, slotName: "Telafi", start: startStr, end: endStr, defaultSubject: tb.defaultSubject, isTelafi: true });
-
                             tm = endM + 10; th = endH;
                             if (tm >= 60) { th += Math.floor(tm/60); tm %= 60; }
                         });
@@ -304,166 +243,147 @@
                 return plan;
             }, [config, programData]);
 
-            const exportPDF = () => {
-                const element = document.getElementById('printable-area');
-                element.classList.add('pdf-mode');
-                
-                const dayControls = document.getElementById('day-slider-controls');
-                if(dayControls) dayControls.style.display = 'none';
+            // Rehber adımları
+            const guideStepsContent = [
+                { text: "Miyav! Buradan haftanın günlerini seçerek programını takip edebilirsin." },
+                { text: "Her ders bloğu 30 dakikadır. Ders ismine tıklayarak o an çalışmak istediğin dersi listeden değiştirebilirsin." },
+                { text: "Eğer çalışmaya geç kaldıysan, kartın içindeki mola çubuğunu kaydırarak programı ileri öteleyebilirsin." },
+                { text: "Mola veya ders ayarı yaptıktan sonra yanındaki kaydet butonuna basmayı unutma, pati izlerini buluta yollayalım!" },
+                { text: "Dersi tamamladığında 'Yaptım' demeyi unutma. Eğer 'Yapmadım' dersen sana gün sonu için telafi öneririm!" }
+            ];
 
-                const opt = {
-                    margin: 10, filename: `${user.name}_Dobby_Programi.pdf`, image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: activeTab === 'calendar' ? 'landscape' : 'portrait' }
-                };
-                html2pdf().set(opt).from(element).save().then(() => { 
-                    element.classList.remove('pdf-mode'); 
-                    if(dayControls) dayControls.style.display = 'flex';
-                });
+            const closeGuide = () => {
+                if (dontShowGuideAgain) {
+                    localStorage.setItem("dobby_hide_guide", "true");
+                }
+                setGuideStep(-1);
+            };
+
+            const QuoteDisplay = () => {
+                const [qIdx, setQIdx] = useState(Math.floor(Math.random() * QUOTES.length));
+                const [fade, setFade] = useState("fade-in");
+                useEffect(() => {
+                    const interval = setInterval(() => {
+                        setFade("fade-out");
+                        setTimeout(() => { setQIdx(prev => (prev + 1) % QUOTES.length); setFade("fade-in"); }, 800);
+                    }, 5000);
+                    return () => clearInterval(interval);
+                }, []);
+                return (
+                    <div className="text-center max-w-lg mx-auto mb-8 min-h-[80px] flex items-center justify-center">
+                        <p className={`quote-font text-xl md:text-2xl text-yellow-500 italic ${fade}`}>"{QUOTES[qIdx]}"</p>
+                    </div>
+                );
             };
 
             if (view === "login") return (
-                <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
+                <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-950">
                     <QuoteDisplay />
-                    <div className="bg-slate-900/60 backdrop-blur-xl p-10 rounded-3xl shadow-2xl w-full max-w-md border border-slate-800 relative overflow-hidden glow-effect slide-up">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600"></div>
+                    <div className="bg-slate-900 p-10 rounded-3xl shadow-2xl w-full max-w-md border border-slate-800 slide-up glow-effect">
                         <div className="flex justify-center mb-6"><BombayCat className="w-28 h-28" /></div>
                         <h1 className="text-3xl font-bold text-center text-white mb-2 glow-text">Dobby Akademi</h1>
-                        <p className="text-slate-400 text-sm mb-8 text-center">Ramazan Kampı & Eğitim Koçluğu</p>
-                        
-                        {errorMsg && <div className="bg-red-900/40 border border-red-500 text-red-200 p-3 rounded-xl text-sm mb-6 text-center">{errorMsg}</div>}
-
                         <form onSubmit={handleLogin} className="space-y-5">
-                            <input required placeholder="Adın Soyadın" className="w-full bg-slate-950/80 p-4 rounded-xl outline-none border border-slate-800 focus:border-yellow-500 text-white transition-all placeholder-slate-600" onChange={e => setFormData({...formData, name: e.target.value})} />
+                            <input required placeholder="Adın Soyadın" className="w-full bg-slate-950/80 p-4 rounded-xl outline-none border border-slate-800 focus:border-yellow-500 text-white" onChange={e => setFormData({...formData, name: e.target.value})} />
                             <div className="flex gap-4">
-                                <select className="flex-1 bg-slate-950/80 p-4 rounded-xl border border-slate-800 text-slate-300 outline-none focus:border-yellow-500 select-arrow" onChange={e => setFormData({...formData, class: e.target.value})}>
-                                    <option value="8">8. Sınıf (LGS)</option>
+                                <select className="flex-1 bg-slate-950/80 p-4 rounded-xl border border-slate-800 text-slate-300 outline-none focus:border-yellow-500" onChange={e => setFormData({...formData, class: e.target.value})}>
+                                    <option value="8">8. Sınıf</option>
                                     <option value="7">7. Sınıf</option>
-                                    <option value="6">6. Sınıf</option>
-                                    <option value="5">5. Sınıf</option>
                                 </select>
-                                <input required type="number" placeholder="Okul No" className="flex-1 bg-slate-950/80 p-4 rounded-xl border border-slate-800 text-white outline-none focus:border-yellow-500 placeholder-slate-600" onChange={e => setFormData({...formData, no: e.target.value})} />
+                                <input required type="number" placeholder="No" className="flex-1 bg-slate-950/80 p-4 rounded-xl border border-slate-800 text-white" onChange={e => setFormData({...formData, no: e.target.value})} />
                             </div>
-                            <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 text-black font-bold text-lg py-4 rounded-xl hover:from-yellow-400 hover:to-yellow-500 transition-all transform active:scale-95 shadow-[0_0_20px_rgba(234,179,8,0.3)] mt-2">
-                                {loading ? "Kapı Açılıyor..." : "İçeri Gir"}
-                            </button>
+                            <button type="submit" className="w-full bg-yellow-500 text-black font-bold py-4 rounded-xl hover:bg-yellow-400 transition-all">Giriş Yap</button>
                         </form>
                     </div>
                 </div>
             );
 
             if (view === "splash") return (
-                <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-black text-center fade-in">
-                    <BombayCat className="w-40 h-40 mb-8" float={true} />
+                <div className="min-h-screen flex flex-col items-center justify-center bg-black text-center fade-in">
+                    <BombayCat className="w-40 h-40 mb-8 animate-bounce" />
                     <h2 className="text-3xl font-bold text-yellow-500 mb-4 glow-text">Hoş Geldin {user.name}!</h2>
-                    <p className="text-slate-400 text-lg">Pati izleri takip ediliyor, verilerin yükleniyor...</p>
+                    <p className="text-slate-400 text-lg italic">Verilerin yükleniyor, masan hazırlanıyor...</p>
                 </div>
             );
 
-            if (view === "guide") {
-                const guideSteps = [
-                    { title: "Dobby'ye Hoş Geldin!", desc: "Miyav! Ben senin sanal koçun Dobby. Seninle beraber harika bir kamp yapacağız.", icon: <BombayCat className="w-24 h-24 mx-auto" /> },
-                    { title: "Esnek Planlama", desc: "Sahur, Sabah, Öğle veya Akşam... Ne zaman çalışmak istersen seç, vardiyalarını ben ayarlayacağım.", icon: <div className="text-6xl">⚙️</div> },
-                    { title: "Soru Takibi & Kaydırma", desc: "Yorulduğunda her bloğun başındaki 'Mola Çubuğunu' kaydırarak programı ileri öteleyebilirsin. Yapamadığın dersler için sana 'Telafi' önereceğim.", icon: <div className="text-6xl">⏳</div> },
-                    { title: "Kalıcı Kayıt & Çıktı", desc: "Arka planda verilerini buluta yedeklerim. İstersen programını PDF olarak da indirebilirsin.", icon: <div className="text-6xl">☁️</div> }
-                ];
-                return (
-                    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950">
-                        <div className="bg-slate-900 p-10 rounded-3xl border border-slate-800 w-full max-w-lg shadow-2xl slide-up text-center relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500"></div>
-                            <div className="mb-6">{guideSteps[guideStep].icon}</div>
-                            <h2 className="text-2xl font-bold text-yellow-500 mb-4">{guideSteps[guideStep].title}</h2>
-                            <p className="text-slate-300 mb-10 leading-relaxed">{guideSteps[guideStep].desc}</p>
-                            
-                            <div className="flex justify-between items-center">
-                                <div className="flex gap-2">
-                                    {guideSteps.map((_, i) => <div key={i} className={`h-2 w-2 rounded-full ${i === guideStep ? 'bg-yellow-500' : 'bg-slate-700'}`}></div>)}
-                                </div>
-                                <button onClick={() => {
-                                    if(guideStep < guideSteps.length - 1) setGuideStep(guideStep + 1);
-                                    else setView("onboarding");
-                                }} className="bg-yellow-500 text-black px-6 py-3 rounded-xl font-bold hover:bg-yellow-400 transition-colors">
-                                    {guideStep < guideSteps.length - 1 ? "İleri ➔" : "Hadi Başlayalım!"}
-                                </button>
-                            </div>
-                        </div>
+            if (view === "guide") return (
+                <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950">
+                    <div className="bg-slate-900 p-10 rounded-3xl border border-slate-800 w-full max-w-lg shadow-2xl text-center relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500"></div>
+                        <BombayCat className="w-24 h-24 mx-auto mb-6" float />
+                        <h2 className="text-2xl font-bold text-yellow-500 mb-4 tracking-tight uppercase">Dobby Rehberi</h2>
+                        <p className="text-slate-300 mb-10 leading-relaxed">Selam! Ben senin sanal koçun Dobby. Şimdi sana bu şık arayüzü nasıl kullanacağını küçük bir turla anlatacağım.</p>
+                        <button onClick={() => { setView("onboarding"); setGuideStep(0); }} className="bg-yellow-500 text-black px-8 py-3 rounded-xl font-bold hover:bg-yellow-400 transition-colors">Tura Başla ✨</button>
                     </div>
-                );
-            }
+                </div>
+            );
 
             if (view === "onboarding") return (
                 <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950">
                     <div className="bg-slate-900 p-8 rounded-3xl border border-slate-800 w-full max-w-xl shadow-2xl slide-up">
-                        <div className="text-4xl mb-4 text-center">🎯</div>
-                        <h2 className="text-2xl font-bold text-white text-center mb-2">Program Kurulumu</h2>
-                        <p className="text-slate-400 text-center mb-8 text-sm">Dobby'nin sana özel vardiyalar oluşturması için seçimlerini yap.</p>
-                        
+                        <h2 className="text-2xl font-bold text-white text-center mb-6">Program Kurulumu</h2>
                         <div className="space-y-6">
-                            <div className="bg-slate-950/50 p-5 rounded-2xl border border-slate-800/50">
-                                <label className="block text-sm font-bold text-yellow-500 mb-3">1. Günde toplam kaç blok (30 Dk) çalışacaksın?</label>
+                            <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800">
+                                <label className="block text-sm font-bold text-yellow-500 mb-3 text-center">Günde kaç blok (30 Dk) çalışacaksın?</label>
                                 <div className="grid grid-cols-3 gap-3">
                                     {[4, 6, 8].map(n => (
-                                        <button key={n} onClick={() => setWizBlocks(n)} className={`p-4 rounded-xl border font-bold transition-all ${wizBlocks === n ? 'bg-yellow-500 text-black border-yellow-500 glow-effect' : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500'}`}>
-                                            {n} Blok <span className="block text-xs font-normal opacity-80 mt-1">({n * 30 / 60} Saat)</span>
-                                        </button>
+                                        <button key={n} onClick={() => setWizBlocks(n)} className={`p-4 rounded-xl border font-bold transition-all ${wizBlocks === n ? 'bg-yellow-500 text-black border-yellow-500' : 'bg-slate-900 text-slate-400 border-slate-700'}`}>{n} Blok</button>
                                     ))}
                                 </div>
                             </div>
-
-                            <div className="bg-slate-950/50 p-5 rounded-2xl border border-slate-800/50">
-                                <label className="block text-sm font-bold text-yellow-500 mb-3">2. Odaklanacağın dersler</label>
-                                <div className="flex flex-wrap gap-2">
-                                    {subjects.map(s => {
-                                        const isSel = wizSubjects.includes(s);
-                                        return (
-                                            <button key={s} onClick={() => {
-                                                if (isSel && wizSubjects.length > 1) setWizSubjects(wizSubjects.filter(x => x !== s));
-                                                else if (!isSel) setWizSubjects([...wizSubjects, s]);
-                                            }} className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${isSel ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>
-                                                {s} {isSel && "✓"}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                {['sahur', 'sabah', 'ogle', 'aksam'].map(s => (
+                                    <div key={s} className="bg-slate-900 p-4 rounded-xl border border-slate-700">
+                                        <label className="flex items-center gap-2 cursor-pointer mb-2">
+                                            <input type="checkbox" checked={wizSlots[s]} onChange={e => setWizSlots({...wizSlots, [s]: e.target.checked})} className="accent-yellow-500" />
+                                            <span className="text-sm font-bold text-white uppercase">{s}</span>
+                                        </label>
+                                        {wizSlots[s] && <input type="time" value={wizTimes[s]} onChange={e => setWizTimes({...wizTimes, [s]: e.target.value})} className="bg-slate-950 border border-slate-800 text-white p-2 rounded-lg w-full outline-none focus:border-yellow-500" />}
+                                    </div>
+                                ))}
                             </div>
-
-                            <div className="bg-slate-950/50 p-5 rounded-2xl border border-slate-800/50">
-                                <label className="block text-sm font-bold text-yellow-500 mb-3">3. Hangi vakitlerde çalışacaksın? Saatlerini seç.</label>
-                                <div className="grid grid-cols-2 gap-4">
-                                    {[ {id: 'sahur', label: 'Sahur'}, {id: 'sabah', label: 'Sabah'}, {id: 'ogle', label: 'Öğle'}, {id: 'aksam', label: 'Akşam'} ].map(slot => (
-                                        <div key={slot.id} className="bg-slate-900 border border-slate-700 p-4 rounded-xl flex flex-col gap-2">
-                                            <label className="flex items-center gap-2 cursor-pointer">
-                                                <input type="checkbox" checked={wizSlots[slot.id]} onChange={e => setWizSlots({...wizSlots, [slot.id]: e.target.checked})} className="w-4 h-4 accent-yellow-500" />
-                                                <span className={`font-bold ${wizSlots[slot.id] ? 'text-white' : 'text-slate-500'}`}>{slot.label}</span>
-                                            </label>
-                                            {wizSlots[slot.id] && (
-                                                <input type="time" value={wizTimes[slot.id]} onChange={e => setWizTimes({...wizTimes, [slot.id]: e.target.value})} className="bg-slate-950 border border-slate-800 text-white p-2 rounded-lg outline-none focus:border-yellow-500 text-sm w-full" />
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <button onClick={() => {
+                            <button onClick={() => { 
                                 const activeSlots = Object.keys(wizSlots).filter(k => wizSlots[k]).map(k => ({ id: k, name: k.toUpperCase(), time: wizTimes[k] }));
-                                if(activeSlots.length === 0) return alert("En az bir çalışma vakti seçmelisin!");
-                                
-                                const newConfig = { blocksPerDay: wizBlocks, subjects: wizSubjects, slots: activeSlots };
-                                setConfig(newConfig);
-                                saveToCloud(newConfig, programData, subjects);
+                                const cfg = { blocksPerDay: wizBlocks, subjects: wizSubjects, slots: activeSlots };
+                                setConfig(cfg); 
+                                saveToCloud(cfg, programData, subjects);
                                 setView("dashboard");
-                            }} className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-4 rounded-xl hover:from-green-400 hover:to-emerald-500 transition-all shadow-lg shadow-green-900/50">
-                                Programı Oluştur ✨
-                            </button>
+                                setGuideStep(0); // İlk kurulumda da rehberi aç
+                            }} className="w-full bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-500 shadow-lg">Programı Oluştur ✨</button>
                         </div>
                     </div>
                 </div>
             );
 
             return (
-                <div className="max-w-7xl mx-auto p-4 md:p-8 fade-in">
+                <div className="max-w-7xl mx-auto p-4 md:p-8 fade-in relative">
+                    
+                    {/* OTOMATİK ETKİLEŞİMLİ REHBER BALONCUĞU */}
+                    {guideStep >= 0 && (
+                        <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-6 pointer-events-auto">
+                            <div className="bg-yellow-500 text-black p-8 rounded-3xl max-w-sm relative guide-bubble slide-up shadow-[0_0_50px_rgba(234,179,8,0.5)]">
+                                <div className="flex items-center gap-3 mb-3 border-b border-black/10 pb-3">
+                                    <BombayCat className="w-12 h-12" />
+                                    <span className="font-bold text-lg tracking-tight uppercase">Dobby Rehber</span>
+                                </div>
+                                <p className="font-medium mb-6 text-sm leading-relaxed">{guideStepsContent[guideStep].text}</p>
+                                
+                                <div className="space-y-4">
+                                    <button onClick={() => guideStep < guideStepsContent.length - 1 ? setGuideStep(guideStep + 1) : closeGuide()} className="w-full bg-black text-white font-bold py-3 rounded-xl hover:opacity-90 transition-all flex justify-center items-center gap-2">
+                                        {guideStep === guideStepsContent.length - 1 ? "Anladım, Harika!" : "Sıradaki Adım"}
+                                    </button>
+                                    
+                                    <label className="flex items-center justify-center gap-2 cursor-pointer pt-2 group">
+                                        <input type="checkbox" checked={dontShowGuideAgain} onChange={e => setDontShowGuideAgain(e.target.checked)} className="w-4 h-4 accent-black" />
+                                        <span className="text-[10px] font-bold uppercase opacity-60 group-hover:opacity-100 transition-opacity">Bir daha gösterme</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <header className="flex flex-col lg:flex-row justify-between items-center mb-8 bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-2xl gap-6">
                         <div className="flex items-center gap-5">
-                            <div className="hidden sm:block"><BombayCat className="w-16 h-16" float={false} /></div>
+                            <BombayCat className="w-16 h-16" />
                             <div>
                                 <h2 className="text-2xl font-bold text-yellow-500 glow-text">{user.name}</h2>
                                 <p className="text-xs text-slate-400 uppercase tracking-widest mt-1 bg-slate-950 px-3 py-1 rounded-full inline-block border border-slate-800">{user.class}. Sınıf Koçluk Paneli</p>
@@ -474,101 +394,75 @@
                                 <button onClick={() => setActiveTab("daily")} className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'daily' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-500 hover:text-white'}`}>Günlük Akış</button>
                                 <button onClick={() => setActiveTab("calendar")} className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'calendar' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-500 hover:text-white'}`}>Takvim</button>
                             </div>
-                            <button onClick={exportPDF} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-2xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg shadow-blue-900/30">📄 PDF İndir</button>
-                            <button onClick={() => setView("onboarding")} className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-2xl text-sm transition-all border border-slate-700">⚙️ Ayarlar</button>
+                            <button onClick={() => { setView("onboarding"); setGuideStep(0); }} className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-5 py-2 rounded-2xl text-sm transition-all border border-slate-700 font-bold">⚙️ Ayarlar</button>
+                            <button onClick={() => setGuideStep(0)} className="bg-blue-600/20 text-blue-400 px-4 py-2 rounded-2xl text-xs font-bold border border-blue-500/20">Yardım</button>
                         </div>
                     </header>
 
                     <div id="printable-area" className="p-2 transition-colors duration-300 rounded-3xl">
                         {activeTab === "daily" && (
                             <div className="space-y-6 relative">
-                                
-                                <div id="day-slider-controls" className="flex justify-between items-center bg-slate-900 p-4 rounded-3xl border border-slate-800 shadow-lg">
-                                    <button 
-                                        onClick={() => setActiveDay(prev => Math.max(1, prev - 1))}
-                                        disabled={activeDay === 1}
-                                        className="w-12 h-12 flex items-center justify-center bg-slate-800 rounded-full text-yellow-500 hover:bg-slate-700 disabled:opacity-30 transition-all text-xl pb-1"
-                                    >❮</button>
+                                <div className="flex justify-between items-center bg-slate-900 p-4 rounded-3xl border border-slate-800 shadow-lg">
+                                    <button onClick={() => setActiveDay(prev => Math.max(1, prev - 1))} disabled={activeDay === 1} className="w-12 h-12 flex items-center justify-center bg-slate-800 rounded-full text-yellow-500 hover:bg-slate-700 disabled:opacity-30 transition-all text-xl">❮</button>
                                     <div className="text-center">
                                         <h3 className="font-bold text-2xl text-white">{activeDay}. Gün</h3>
                                         <p className="text-yellow-500 text-sm font-semibold uppercase tracking-wider">{generatedSchedule.find(d => d.dayNum === activeDay)?.dayName}</p>
                                     </div>
-                                    <button 
-                                        onClick={() => setActiveDay(prev => Math.min(7, prev + 1))}
-                                        disabled={activeDay === 7}
-                                        className="w-12 h-12 flex items-center justify-center bg-slate-800 rounded-full text-yellow-500 hover:bg-slate-700 disabled:opacity-30 transition-all text-xl pb-1"
-                                    >❯</button>
+                                    <button onClick={() => setActiveDay(prev => Math.min(7, prev + 1))} disabled={activeDay === 7} className="w-12 h-12 flex items-center justify-center bg-slate-800 rounded-full text-yellow-500 hover:bg-slate-700 disabled:opacity-30 transition-all text-xl">❯</button>
                                 </div>
 
                                 {generatedSchedule.filter(day => day.dayNum === activeDay).map(day => (
-                                    <div key={day.dayNum} className="bg-slate-900/50 border border-slate-800 rounded-3xl overflow-hidden shadow-xl slide-up">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-6">
-                                            {day.blocks.map((block, idx) => {
-                                                const currentSubj = programData[`${block.id}_subject`] || block.defaultSubject;
-                                                const status = programData[`${block.id}_status`];
-                                                const isTelafiRequested = programData[`${block.id}_telafi`];
-                                                const delayValue = programData[`${block.id}_delay`] || 0;
-
-                                                return (
-                                                    <div key={block.id} className={`bg-slate-950 border p-5 pt-8 rounded-2xl flex flex-col gap-4 relative transition-transform hover:-translate-y-1 ${block.isTelafi ? 'border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.1)]' : 'border-slate-800 hover:border-slate-600'}`}>
-                                                        
-                                                        {!block.isTelafi && (
-                                                            <div className="absolute -top-4 right-4 bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 shadow-xl flex flex-col items-center gap-1 z-10">
-                                                                <div className="flex items-center gap-2 w-full justify-between">
-                                                                    <span className="text-[10px] text-slate-300 font-bold">☕ Mola:</span>
-                                                                    <span className="text-[11px] font-bold text-yellow-400">{delayValue} dk</span>
-                                                                </div>
-                                                                <input 
-                                                                    type="range" min="0" max="60" step="5" value={delayValue} 
-                                                                    onChange={e => updateProgress(block.id, 'delay', parseInt(e.target.value))}
-                                                                    className="w-24 mt-1"
-                                                                />
-                                                            </div>
-                                                        )}
-
-                                                        <div className="flex justify-between items-center mt-2">
-                                                            <span className={`text-xs font-bold px-3 py-1.5 rounded-lg border ${block.isTelafi ? 'bg-purple-900/30 text-purple-400 border-purple-500/50' : 'bg-slate-800/80 text-yellow-500 border-slate-700'}`}>
-                                                                {block.slotName} {block.isTelafi ? '' : `Blok`}
-                                                            </span>
-                                                            <span className="text-xs font-mono font-bold bg-slate-900 px-2 py-1 rounded text-slate-300">{block.start} - {block.end}</span>
-                                                        </div>
-                                                        
-                                                        <div className="relative">
-                                                            <select 
-                                                                className="font-bold text-lg bg-slate-900 border border-slate-700 p-2 pr-8 rounded-lg text-white outline-none w-full focus:border-yellow-500 cursor-pointer select-arrow"
-                                                                value={currentSubj} 
-                                                                onChange={e => updateSubject(block.id, e.target.value)}
-                                                            >
-                                                                {subjects.map(s => <option key={s} value={s}>{s}</option>)}
-                                                                {!subjects.includes(currentSubj) && <option value={currentSubj}>{currentSubj}</option>}
-                                                            </select>
-                                                        </div>
-                                                        
-                                                        <div className="flex gap-2 bg-slate-900/50 p-1.5 rounded-xl border border-slate-800/50">
-                                                            <button onClick={() => updateProgress(block.id, 'status', 'yaptim')} className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${status === 'yaptim' ? 'bg-green-600 text-white' : 'text-slate-500 hover:bg-slate-800'}`}>✅ Yaptım</button>
-                                                            <button onClick={() => updateProgress(block.id, 'status', 'yapmadim')} className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${status === 'yapmadim' ? 'bg-red-600 text-white' : 'text-slate-500 hover:bg-slate-800'}`}>❌ Yapmadım</button>
-                                                        </div>
-
-                                                        {status === 'yapmadim' && !isTelafiRequested && !block.isTelafi && (
-                                                            <div className="bg-red-950/40 border border-red-900 p-3 rounded-xl text-xs text-red-200 mt-[-5px] slide-up">
-                                                                <p className="font-bold mb-2 flex items-center gap-2"><BombayCat className="w-6 h-6" float={false}/> Bunu gün sonuna ekleyelim mi?</p>
-                                                                <div className="flex gap-2">
-                                                                    <button onClick={() => updateProgress(block.id, 'telafi', true)} className="bg-red-600 hover:bg-red-500 text-white px-2 py-1 rounded font-bold flex-1">Evet, Ekle</button>
-                                                                    <button onClick={() => updateProgress(block.id, 'status', 'gec')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded flex-1">Hayır, Kalsın</button>
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                        <div className="grid grid-cols-3 gap-3">
-                                                            <div className="flex flex-col items-center gap-1"><span className="text-[10px] text-green-500 font-bold uppercase">Doğru</span><input type="number" className="bg-slate-900 border border-slate-800 p-2 rounded-lg text-center text-sm font-bold text-green-400 outline-none w-full" value={programData[`${block.id}_D`] || ''} onChange={e => updateProgress(block.id, 'D', e.target.value)} /></div>
-                                                            <div className="flex flex-col items-center gap-1"><span className="text-[10px] text-red-500 font-bold uppercase">Yanlış</span><input type="number" className="bg-slate-900 border border-slate-800 p-2 rounded-lg text-center text-sm font-bold text-red-400 outline-none w-full" value={programData[`${block.id}_Y`] || ''} onChange={e => updateProgress(block.id, 'Y', e.target.value)} /></div>
-                                                            <div className="flex flex-col items-center gap-1"><span className="text-[10px] text-slate-400 font-bold uppercase">Boş</span><input type="number" className="bg-slate-900 border border-slate-800 p-2 rounded-lg text-center text-sm font-bold text-slate-300 outline-none w-full" value={programData[`${block.id}_B`] || ''} onChange={e => updateProgress(block.id, 'B', e.target.value)} /></div>
-                                                        </div>
-                                                        <textarea placeholder="Daha detaylı dönüt veya konu notu..." className="bg-slate-900 border border-slate-800 p-3 rounded-xl text-xs w-full text-slate-200 outline-none h-16 resize-none custom-scrollbar focus:border-yellow-500" value={programData[`${block.id}_not`] || ''} onChange={e => updateProgress(block.id, 'not', e.target.value)}></textarea>
+                                    <div key={day.dayNum} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-6 bg-slate-900/50 border border-slate-800 rounded-3xl shadow-xl">
+                                        {day.blocks.map((block) => {
+                                            const currentSubj = programData[`${block.id}_subject`] || block.defaultSubject;
+                                            const status = programData[`${block.id}_status`];
+                                            const delayValue = programData[`${block.id}_delay`] || 0;
+                                            return (
+                                                <div key={block.id} className={`bg-slate-950 border p-5 rounded-2xl flex flex-col gap-4 relative transition-transform hover:-translate-y-1 ${block.isTelafi ? 'border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.1)]' : 'border-slate-800 hover:border-slate-600'}`}>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className={`text-[10px] font-bold px-2 py-1 rounded border ${block.isTelafi ? 'text-purple-400 border-purple-500/30' : 'text-yellow-500 border-yellow-500/20'}`}>{block.slotName}</span>
+                                                        <span className="text-xs font-mono font-bold text-slate-400">{block.start}</span>
                                                     </div>
-                                                );
-                                            })}
-                                        </div>
+                                                    
+                                                    {!block.isTelafi && (
+                                                        <div className="flex items-center gap-3 bg-slate-900/50 p-2 rounded-xl border border-slate-800">
+                                                            <span className="text-[10px] text-slate-500 font-bold whitespace-nowrap">☕ {delayValue} dk</span>
+                                                            <input type="range" min="0" max="60" step="5" value={delayValue} onChange={e => updateProgress(block.id, 'delay', parseInt(e.target.value))} className="flex-1 accent-yellow-500" />
+                                                            <button onClick={() => saveToCloud(config, programData, subjects)} className="w-7 h-7 flex items-center justify-center bg-yellow-500 text-black rounded-lg hover:scale-110 active:scale-95 transition-all text-xs shadow-lg" title="Hızlı Kaydet">💾</button>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="relative">
+                                                        <select className="font-bold text-lg bg-slate-900 border border-slate-800 p-2 pr-8 rounded-xl text-white outline-none w-full focus:border-yellow-500 select-arrow" value={currentSubj} onChange={e => updateSubject(block.id, e.target.value)}>
+                                                            {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+                                                            {!subjects.includes(currentSubj) && <option value={currentSubj}>{currentSubj}</option>}
+                                                        </select>
+                                                    </div>
+                                                    
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => updateProgress(block.id, 'status', 'yaptim')} className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold transition-all ${status === 'yaptim' ? 'bg-green-600 text-white' : 'bg-slate-900 text-slate-500'}`}>✅ Yaptım</button>
+                                                        <button onClick={() => updateProgress(block.id, 'status', 'yapmadim')} className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold transition-all ${status === 'yapmadim' ? 'bg-red-600 text-white' : 'bg-slate-900 text-slate-500'}`}>❌ Yapmadım</button>
+                                                    </div>
+
+                                                    {status === 'yapmadim' && !block.isTelafi && !programData[`${block.id}_telafi`] && (
+                                                        <div className="bg-red-950/40 border border-red-900/50 p-2 rounded-xl text-[10px] text-red-200 slide-up">
+                                                            <p className="font-bold mb-2">Telafi ekleyelim mi?</p>
+                                                            <div className="flex gap-2">
+                                                                <button onClick={() => updateProgress(block.id, 'telafi', true)} className="bg-red-600 text-white px-2 py-1 rounded-lg flex-1">Evet</button>
+                                                                <button onClick={() => updateProgress(block.id, 'status', 'pas')} className="bg-slate-800 text-slate-400 px-2 py-1 rounded-lg flex-1">Hayır</button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="grid grid-cols-3 gap-2">
+                                                        <input type="number" placeholder="D" className="bg-slate-900 border border-slate-800 p-2 rounded-xl text-center text-xs font-bold text-green-400 outline-none" value={programData[`${block.id}_D`] || ''} onChange={e => updateProgress(block.id, 'D', e.target.value)} />
+                                                        <input type="number" placeholder="Y" className="bg-slate-900 border border-slate-800 p-2 rounded-xl text-center text-xs font-bold text-red-400 outline-none" value={programData[`${block.id}_Y`] || ''} onChange={e => updateProgress(block.id, 'Y', e.target.value)} />
+                                                        <input type="number" placeholder="B" className="bg-slate-900 border border-slate-800 p-2 rounded-xl text-center text-xs font-bold text-slate-400 outline-none" value={programData[`${block.id}_B`] || ''} onChange={e => updateProgress(block.id, 'B', e.target.value)} />
+                                                    </div>
+                                                    <textarea placeholder="Not..." className="bg-slate-900 border border-slate-800 p-2 rounded-xl text-xs w-full text-slate-300 outline-none h-12 resize-none" value={programData[`${block.id}_not`] || ''} onChange={e => updateProgress(block.id, 'not', e.target.value)}></textarea>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 ))}
                             </div>
@@ -576,33 +470,27 @@
 
                         {activeTab === "calendar" && (
                             <div className="overflow-x-auto pb-6 custom-scrollbar bg-slate-900/30 p-6 rounded-3xl border border-slate-800">
-                                <h3 className="text-2xl font-bold mb-6 text-center text-yellow-500 print:text-black">Haftalık Dobby Takvimi</h3>
+                                <h3 className="text-2xl font-bold mb-6 text-center text-yellow-500">Haftalık Dobby Takvimi</h3>
                                 <div className="calendar-grid min-w-[1000px] shadow-2xl">
                                     <div className="calendar-header">Saat / Blok</div>
                                     {generatedSchedule.map(d => <div key={d.dayNum} className="calendar-header border-b-2 border-yellow-500/50">{d.dayName}</div>)}
-                                    
                                     {Array.from({length: config.blocksPerDay + 2}).map((_, blockIdx) => (
                                         <React.Fragment key={blockIdx}>
-                                            <div className="calendar-time-label flex-col gap-1 p-2">
-                                                <span className="text-white text-center">{blockIdx+1}. Satır</span>
-                                            </div>
+                                            <div className="calendar-time-label flex-col gap-1 p-2"><span className="text-white text-center">{blockIdx+1}. Blok</span></div>
                                             {generatedSchedule.map(day => {
                                                 const block = day.blocks[blockIdx];
-                                                if(!block) return <div key={`empty_${day.dayNum}_${blockIdx}`} className="calendar-cell opacity-50"></div>;
-                                                
+                                                if(!block) return <div key={`e_${day.dayNum}_${blockIdx}`} className="calendar-cell opacity-50"></div>;
                                                 const currentSubj = programData[`${block.id}_subject`] || block.defaultSubject;
                                                 const totalQ = (parseInt(programData[`${block.id}_D`])||0) + (parseInt(programData[`${block.id}_Y`])||0) + (parseInt(programData[`${block.id}_B`])||0);
                                                 const isDone = programData[`${block.id}_status`] === 'yaptim';
-                                                
                                                 return (
                                                     <div key={block.id} className={`calendar-cell ${block.isTelafi ? 'border-l-2 border-purple-500' : ''}`}>
                                                         <div className="flex justify-between items-start">
-                                                            <span className={`text-xs font-bold truncate ${block.isTelafi ? 'text-purple-400' : 'text-yellow-500'}`} title={currentSubj}>{currentSubj}</span>
+                                                            <span className={`text-xs font-bold truncate ${block.isTelafi ? 'text-purple-400' : 'text-yellow-500'}`}>{currentSubj}</span>
                                                             {isDone && <span className="text-[10px]">✅</span>}
                                                         </div>
                                                         <span className="text-[9px] font-mono opacity-60">{block.start}</span>
-                                                        {programData[`${block.id}_not`] && <span className="text-[10px] text-slate-400 leading-tight line-clamp-2" title={programData[`${block.id}_not`]}>{programData[`${block.id}_not`]}</span>}
-                                                        {totalQ > 0 && <span className="mt-auto text-[10px] bg-green-900/30 border border-green-500/30 text-green-400 px-2 py-1 rounded-md w-max font-bold">{totalQ} Soru</span>}
+                                                        {totalQ > 0 && <span className="mt-auto text-[10px] bg-green-900/30 text-green-400 px-2 py-1 rounded-md w-max font-bold">{totalQ} Soru</span>}
                                                     </div>
                                                 );
                                             })}
