@@ -57,6 +57,545 @@
             border-style: solid;
             border-color: #eab308 transparent transparent transparent;
         }
+
+        /* Tarih seçici modern görünüm */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxAR1NFhHbFecZUmnYe_7jYuN00vGEMHYJT6W-HsdCTdf5cwHDSVye1YcYpIIHx1MIR6g/exec";
+        const INITIAL_SUBJECTS = ["Türkçe", "Matematik", "Fen Bilimleri", "İngilizce", "T.C. İnkılap Tarihi", "Din Kültürü", "Genel Deneme"];
+        const QUOTES = [
+            "Gecenin karanlığında aydınlanan zihinler, sabahın güneşinden daha parlaktır...",
+            "Zorluklar seni durdurmak için değil, ne kadar güçlü olduğunu göstermek içindir.",
+            "Sahurun bereketi, masandaki kalem sesine karışsın. Harika işler başaracaksın.",
+            "Bugün yapacağın her 30 dakikalık odaklanma, yarınki büyük zaferinin tuğlasıdır."
+        ];
+
+        const BombayCat = ({ className = "w-24 h-24", float = false }) => (
+            <svg viewBox="0 0 200 200" className={`${className} drop-shadow-[0_0_15px_rgba(234,179,8,0.3)] ${float ? 'animate-float' : ''} transition-transform duration-300 hover:scale-105`} xmlns="http://www.w3.org/2000/svg">
+                <path d="M45 150 Q30 200 20 200 L180 200 Q170 200 155 150 Z" fill="#0a0a0c"/>
+                <path d="M40 85 Q15 25 45 20 Q70 30 80 60 Z" fill="#0a0a0c"/>
+                <path d="M45 80 Q28 35 46 30 Q62 40 72 60 Z" fill="#1f1f24"/>
+                <path d="M160 85 Q185 25 155 20 Q130 30 120 60 Z" fill="#0a0a0c"/>
+                <path d="M155 80 Q172 35 154 30 Q138 40 128 60 Z" fill="#1f1f24"/>
+                <ellipse cx="100" cy="115" rx="75" ry="65" fill="#0f0f11"/>
+                <ellipse cx="65" cy="135" rx="25" ry="20" fill="#151518"/>
+                <ellipse cx="135" cy="135" rx="25" ry="20" fill="#151518"/>
+                <path d="M85 95 Q100 90 115 95 L106 122 L94 122 Z" fill="#121215"/>
+                <circle cx="65" cy="105" r="22" fill="#000000"/>
+                <circle cx="65" cy="105" r="20" fill="#eab308"/> 
+                <circle cx="65" cy="105" r="11" fill="#000000"/>
+                <circle cx="60" cy="98" r="5" fill="#FFFFFF"/>
+                <circle cx="72" cy="112" r="2" fill="#FFFFFF" opacity="0.6"/>
+                <circle cx="135" cy="105" r="22" fill="#000000"/>
+                <circle cx="135" cy="105" r="20" fill="#eab308"/>
+                <circle cx="135" cy="105" r="11" fill="#000000"/>
+                <circle cx="130" cy="98" r="5" fill="#FFFFFF"/>
+                <circle cx="142" cy="112" r="2" fill="#FFFFFF" opacity="0.6"/>
+                <path d="M93 125 Q100 122 107 125 L104 130 Q100 132 96 130 Z" fill="#000000"/>
+                <ellipse cx="100" cy="126" rx="3" ry="1.5" fill="#2a2a2e"/>
+                <path d="M100 131 L100 138 M100 138 Q88 145 80 136 M100 138 Q112 145 120 136" stroke="#111" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+                <path d="M70 135 Q40 130 15 138 M70 142 Q35 145 10 155 M70 148 Q40 158 20 170" stroke="#4a4a4e" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+                <path d="M130 135 Q160 130 185 138 M130 142 Q165 145 190 155 M130 148 Q160 158 180 170" stroke="#4a4a4e" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+                <circle cx="65" cy="72" r="1.5" fill="#4a4a4e"/>
+                <circle cx="55" cy="76" r="1.5" fill="#4a4a4e"/>
+                <circle cx="135" cy="72" r="1.5" fill="#4a4a4e"/>
+                <circle cx="145" cy="76" r="1.5" fill="#4a4a4e"/>
+            </svg>
+        );
+
+        const App = () => {
+            const [view, setView] = useState("login"); 
+            const [user, setUser] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [errorMsg, setErrorMsg] = useState("");
+            
+            const [config, setConfig] = useState(null);
+            const [programData, setProgramData] = useState({});
+            const [subjects, setSubjects] = useState(INITIAL_SUBJECTS);
+            
+            const [formData, setFormData] = useState({ name: '', class: '8', no: '' });
+            const [wizBlocks, setWizBlocks] = useState(6);
+            const [wizSubjects, setWizSubjects] = useState(["Matematik", "Türkçe", "Fen Bilimleri"]);
+            const [wizSlots, setWizSlots] = useState({ sahur: false, sabah: true, ogle: true, aksam: true });
+            const [wizTimes, setWizTimes] = useState({ sahur: "04:30", sabah: "09:00", ogle: "14:00", aksam: "20:00" });
+            const [wizStartDate, setWizStartDate] = useState(new Date().toISOString().split('T')[0]);
+            
+            const [activeTab, setActiveTab] = useState("daily");
+            const [activeDay, setActiveDay] = useState(1); 
+            const [guideStep, setGuideStep] = useState(-1);
+            const [dontShowGuideAgain, setDontShowGuideAgain] = useState(false);
+
+            const playMeow = () => {
+                const audio = new Audio("https://upload.wikimedia.org/wikipedia/commons/5/53/Meow.ogg");
+                audio.volume = 0.5;
+                audio.play().catch(e => {});
+            };
+
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                setLoading(true); setErrorMsg("");
+                try {
+                    const resp = await fetch(`${SCRIPT_URL}?no=${formData.no}&class=${formData.class}`);
+                    const textResp = await resp.text();
+                    let savedData = null;
+                    try {
+                        const result = JSON.parse(textResp);
+                        if (result.status === "found") savedData = JSON.parse(result.data);
+                    } catch(e) {}
+
+                    setUser(formData);
+                    setView("splash");
+                    playMeow();
+
+                    setTimeout(() => {
+                        if (savedData && savedData.config) {
+                            setConfig(savedData.config);
+                            setProgramData(savedData.progress || {});
+                            if(savedData.subjects) setSubjects(savedData.subjects);
+                            setView("dashboard");
+                            
+                            if (localStorage.getItem("dobby_hide_guide") !== "true") {
+                                setGuideStep(0);
+                            }
+                        } else {
+                            setView("guide");
+                        }
+                    }, 3000);
+
+                } catch (err) { 
+                    setErrorMsg("Bağlantı kurulamadı. İnternetini kontrol et!"); 
+                    setLoading(false);
+                } 
+            };
+
+            const saveToCloud = async (newConfig, newProgress, newSubjects) => {
+                const payload = { ...user, state: { config: newConfig, progress: newProgress, subjects: newSubjects || subjects } };
+                try { await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) }); } catch (e) {}
+            };
+
+            const updateProgress = (id, field, value) => {
+                const newData = { ...programData, [`${id}_${field}`]: value };
+                if (field === 'status' && value !== 'yapmadim') {
+                    newData[`${id}_telafi`] = false;
+                }
+                setProgramData(newData);
+            };
+
+            const updateSubject = (id, value) => {
+                const newData = { ...programData, [`${id}_subject`]: value };
+                setProgramData(newData);
+                saveToCloud(config, newData, subjects);
+            };
+
+            const generatedSchedule = useMemo(() => {
+                if (!config || !config.slots) return [];
+                const plan = [];
+                const startBase = new Date(config.startDate || new Date());
+                const dayNamesArr = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"];
+
+                for (let d = 1; d <= 7; d++) {
+                    let blocks = [];
+                    let blockCounter = 0;
+                    let extraBlocks = []; 
+                    const activeSlots = config.slots; 
+                    const blocksPerSlot = Math.floor(config.blocksPerDay / activeSlots.length);
+                    const remainder = config.blocksPerDay % activeSlots.length;
+                    
+                    // Gerçek tarihi hesapla
+                    const currentDate = new Date(startBase);
+                    currentDate.setDate(startBase.getDate() + (d - 1));
+                    const dayLabel = dayNamesArr[currentDate.getDay()];
+                    const dateStr = currentDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
+
+                    activeSlots.forEach((slot, sIdx) => {
+                        let [h, m] = slot.time.split(':').map(Number);
+                        let slotBlocks = blocksPerSlot + (sIdx < remainder ? 1 : 0);
+                        for (let b = 0; b < slotBlocks; b++) {
+                            const blockId = `d${d}_b${blockCounter}`;
+                            const delayMins = parseInt(programData[`${blockId}_delay`]) || 0;
+                            if (delayMins > 0) {
+                                m += delayMins;
+                                if (m >= 60) { h += Math.floor(m/60); m %= 60; }
+                            }
+                            let startStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+                            let endM = m + 30; let endH = h;
+                            if (endM >= 60) { endH += Math.floor(endM/60); endM %= 60; }
+                            let endStr = `${String(endH).padStart(2,'0')}:${String(endM).padStart(2,'0')}`;
+                            let subj = config.subjects[blockCounter % config.subjects.length];
+                            blocks.push({ id: blockId, slotName: slot.name, start: startStr, end: endStr, defaultSubject: subj, isTelafi: false });
+                            m = endM + 10; h = endH;
+                            if (m >= 60) { h += Math.floor(m/60); m %= 60; }
+                            if (programData[`${blockId}_telafi`]) {
+                                extraBlocks.push({ defaultSubject: subj + " (Telafi)", originalId: blockId });
+                            }
+                            blockCounter++;
+                        }
+                    });
+                    if (extraBlocks.length > 0) {
+                        let [th, tm] = [22, 0]; 
+                        extraBlocks.forEach((tb, tidx) => {
+                            let startStr = `${String(th).padStart(2,'0')}:${String(tm).padStart(2,'0')}`;
+                            let endM = tm + 30; let endH = th;
+                            if (endM >= 60) { endH += Math.floor(endM/60); endM %= 60; }
+                            let endStr = `${String(endH).padStart(2,'0')}:${String(endM).padStart(2,'0')}`;
+                            blocks.push({ id: `d${d}_telafi_${tidx}`, slotName: "Telafi", start: startStr, end: endStr, defaultSubject: tb.defaultSubject, isTelafi: true });
+                            tm = endM + 10; th = endH;
+                            if (tm >= 60) { th += Math.floor(tm/60); tm %= 60; }
+                        });
+                    }
+                    plan.push({ dayNum: d, dayName: dayLabel, fullDate: dateStr, blocks });
+                }
+                return plan;
+            }, [config, programData]);
+
+            // Rehber adımları
+            const guideStepsContent = [
+                { text: "Miyav! Buradan haftanın günlerini seçerek programını takip edebilirsin." },
+                { text: "Her ders bloğu 30 dakikadır. Ders ismine tıklayarak o an çalışmak istediğin dersi listeden değiştirebilirsin." },
+                { text: "Eğer çalışmaya geç kaldıysan, kartın içindeki mola çubuğunu kaydırarak programı ileri öteleyebilirsin." },
+                { text: "Mola veya ders ayarı yaptıktan sonra yanındaki kaydet butonuna basmayı unutma, pati izlerini buluta yollayalım!" },
+                { text: "Dersi tamamladığında 'Yaptım' demeyi unutma. Eğer 'Yapmadım' dersen sana gün sonu için telafi öneririm!" }
+            ];
+
+            const closeGuide = () => {
+                if (dontShowGuideAgain) {
+                    localStorage.setItem("dobby_hide_guide", "true");
+                }
+                setGuideStep(-1);
+            };
+
+            const QuoteDisplay = () => {
+                const [qIdx, setQIdx] = useState(Math.floor(Math.random() * QUOTES.length));
+                const [fade, setFade] = useState("fade-in");
+                useEffect(() => {
+                    const interval = setInterval(() => {
+                        setFade("fade-out");
+                        setTimeout(() => { setQIdx(prev => (prev + 1) % QUOTES.length); setFade("fade-in"); }, 800);
+                    }, 5000);
+                    return () => clearInterval(interval);
+                }, []);
+                return (
+                    <div className="text-center max-w-lg mx-auto mb-8 min-h-[80px] flex items-center justify-center">
+                        <p className={`quote-font text-xl md:text-2xl text-yellow-500 italic ${fade}`}>"{QUOTES[qIdx]}"</p>
+                    </div>
+                );
+            };
+
+            if (view === "login") return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-950">
+                    <QuoteDisplay />
+                    <div className="bg-slate-900 p-10 rounded-3xl shadow-2xl w-full max-w-md border border-slate-800 slide-up glow-effect">
+                        <div className="flex justify-center mb-6"><BombayCat className="w-28 h-28" /></div>
+                        <h1 className="text-3xl font-bold text-center text-white mb-2 glow-text">Dobby Akademi</h1>
+                        <form onSubmit={handleLogin} className="space-y-5">
+                            <input required placeholder="Adın Soyadın" className="w-full bg-slate-950/80 p-4 rounded-xl outline-none border border-slate-800 focus:border-yellow-500 text-white" onChange={e => setFormData({...formData, name: e.target.value})} />
+                            <div className="flex gap-4">
+                                <select className="flex-1 bg-slate-950/80 p-4 rounded-xl border border-slate-800 text-slate-300 outline-none focus:border-yellow-500" onChange={e => setFormData({...formData, class: e.target.value})}>
+                                    <option value="8">8. Sınıf</option>
+                                    <option value="7">7. Sınıf</option>
+                                </select>
+                                <input required type="number" placeholder="No" className="flex-1 bg-slate-950/80 p-4 rounded-xl border border-slate-800 text-white" onChange={e => setFormData({...formData, no: e.target.value})} />
+                            </div>
+                            <button type="submit" className="w-full bg-yellow-500 text-black font-bold py-4 rounded-xl hover:bg-yellow-400 transition-all">Giriş Yap</button>
+                        </form>
+                    </div>
+                </div>
+            );
+
+            if (view === "splash") return (
+                <div className="min-h-screen flex flex-col items-center justify-center bg-black text-center fade-in">
+                    <BombayCat className="w-40 h-40 mb-8 animate-bounce" />
+                    <h2 className="text-3xl font-bold text-yellow-500 mb-4 glow-text">Hoş Geldin {user.name}!</h2>
+                    <p className="text-slate-400 text-lg italic">Verilerin yükleniyor, masan hazırlanıyor...</p>
+                </div>
+            );
+
+            if (view === "guide") return (
+                <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950">
+                    <div className="bg-slate-900 p-10 rounded-3xl border border-slate-800 w-full max-w-lg shadow-2xl text-center relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500"></div>
+                        <BombayCat className="w-24 h-24 mx-auto mb-6" float />
+                        <h2 className="text-2xl font-bold text-yellow-500 mb-4 tracking-tight uppercase">Dobby Rehberi</h2>
+                        <p className="text-slate-300 mb-10 leading-relaxed">Selam! Ben senin sanal koçun Dobby. Şimdi sana bu şık arayüzü nasıl kullanacağını küçük bir turla anlatacağım.</p>
+                        <button onClick={() => { setView("onboarding"); setGuideStep(0); }} className="bg-yellow-500 text-black px-8 py-3 rounded-xl font-bold hover:bg-yellow-400 transition-colors">Tura Başla ✨</button>
+                    </div>
+                </div>
+            );
+
+            if (view === "onboarding") return (
+                <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950">
+                    <div className="bg-slate-900 p-8 rounded-3xl border border-slate-800 w-full max-w-xl shadow-2xl slide-up max-h-[90vh] overflow-y-auto custom-scrollbar">
+                        <h2 className="text-2xl font-bold text-white text-center mb-6">Program Kurulumu</h2>
+                        <div className="space-y-6">
+                            <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800">
+                                <label className="block text-sm font-bold text-yellow-500 mb-3 text-center uppercase tracking-wider italic">Günde kaç blok (30 Dk) çalışacaksın?</label>
+                                <div className="grid grid-cols-3 gap-3">
+                                    {[4, 6, 8].map(n => (
+                                        <button key={n} onClick={() => setWizBlocks(n)} className={`p-4 rounded-xl border font-bold transition-all ${wizBlocks === n ? 'bg-yellow-500 text-black border-yellow-500 shadow-lg' : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500'}`}>{n} Blok</button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800">
+                                <label className="block text-sm font-bold text-yellow-500 mb-3 text-center uppercase tracking-wider italic">Program ne zaman başlasın?</label>
+                                <input 
+                                    type="date" 
+                                    value={wizStartDate} 
+                                    onChange={e => setWizStartDate(e.target.value)} 
+                                    className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-xl outline-none focus:border-yellow-500 transition-all font-bold text-center" 
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                {['sahur', 'sabah', 'ogle', 'aksam'].map(s => (
+                                    <div key={s} className="bg-slate-900 p-4 rounded-xl border border-slate-700">
+                                        <label className="flex items-center gap-2 cursor-pointer mb-2">
+                                            <input type="checkbox" checked={wizSlots[s]} onChange={e => setWizSlots({...wizSlots, [s]: e.target.checked})} className="accent-yellow-500" />
+                                            <span className="text-sm font-bold text-white uppercase">{s}</span>
+                                        </label>
+                                        {wizSlots[s] && <input type="time" value={wizTimes[s]} onChange={e => setWizTimes({...wizTimes, [s]: e.target.value})} className="bg-slate-950 border border-slate-800 text-white p-2 rounded-lg w-full outline-none focus:border-yellow-500" />}
+                                    </div>
+                                ))}
+                            </div>
+                            <button onClick={() => { 
+                                const activeSlots = Object.keys(wizSlots).filter(k => wizSlots[k]).map(k => ({ id: k, name: k.toUpperCase(), time: wizTimes[k] }));
+                                const cfg = { blocksPerDay: wizBlocks, slots: activeSlots, subjects: INITIAL_SUBJECTS, startDate: wizStartDate };
+                                setConfig(cfg); 
+                                saveToCloud(cfg, programData, subjects);
+                                setView("dashboard");
+                                if (localStorage.getItem("dobby_hide_guide") !== "true") setGuideStep(0); 
+                            }} className="w-full bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-500 shadow-lg hover:-translate-y-1 transition-all">Programı Oluştur ✨</button>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="max-w-7xl mx-auto p-4 md:p-8 fade-in relative">
+                    
+                    {guideStep >= 0 && (
+                        <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-6 pointer-events-auto">
+                            <div className="bg-yellow-500 text-black p-8 rounded-3xl max-w-sm relative guide-bubble slide-up shadow-[0_0_50px_rgba(234,179,8,0.5)]">
+                                <div className="flex items-center gap-3 mb-3 border-b border-black/10 pb-3">
+                                    <BombayCat className="w-12 h-12" />
+                                    <span className="font-bold text-lg tracking-tight uppercase">Dobby Rehber</span>
+                                </div>
+                                <p className="font-medium mb-6 text-sm leading-relaxed">{guideStepsContent[guideStep].text}</p>
+                                
+                                <div className="space-y-4">
+                                    <button onClick={() => guideStep < guideStepsContent.length - 1 ? setGuideStep(guideStep + 1) : closeGuide()} className="w-full bg-black text-white font-bold py-3 rounded-xl hover:opacity-90 transition-all flex justify-center items-center gap-2">
+                                        {guideStep === guideStepsContent.length - 1 ? "Anladım, Harika!" : "Sıradaki Adım"}
+                                    </button>
+                                    
+                                    <label className="flex items-center justify-center gap-2 cursor-pointer pt-2 group">
+                                        <input type="checkbox" checked={dontShowGuideAgain} onChange={e => setDontShowGuideAgain(e.target.checked)} className="w-4 h-4 accent-black" />
+                                        <span className="text-[10px] font-bold uppercase opacity-60 group-hover:opacity-100 transition-opacity">Bir daha gösterme</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <header className="flex flex-col lg:flex-row justify-between items-center mb-8 bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-2xl gap-6">
+                        <div className="flex items-center gap-5">
+                            <BombayCat className="w-16 h-16" />
+                            <div>
+                                <h2 className="text-2xl font-bold text-yellow-500 glow-text">{user.name}</h2>
+                                <p className="text-xs text-slate-400 uppercase tracking-widest mt-1 bg-slate-950 px-3 py-1 rounded-full inline-block border border-slate-800">{user.class}. Sınıf Koçluk Paneli</p>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap gap-3 justify-center" id="day-selector">
+                            {[1,2,3,4,5,6,7].map(d => (
+                                <button key={d} onClick={() => setActiveDay(d)} className={`w-10 h-10 rounded-xl font-bold transition-all ${activeDay === d ? 'bg-yellow-500 text-black shadow-[0_0_15px_rgba(234,179,8,0.4)]' : 'bg-slate-800 text-slate-400 hover:text-white'}`}>{d}</button>
+                            ))}
+                            <button onClick={() => setView("onboarding")} className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-5 py-2 rounded-2xl text-sm transition-all border border-slate-700 font-bold">⚙️ Ayarlar</button>
+                            <button onClick={() => setGuideStep(0)} className="bg-blue-600/20 text-blue-400 px-4 py-2 rounded-2xl text-xs font-bold border border-blue-500/20">Yardım</button>
+                        </div>
+                    </header>
+
+                    <div className="p-2 transition-colors duration-300 rounded-3xl">
+                        {activeTab === "daily" && (
+                            <div className="space-y-6 relative">
+                                <div className="flex justify-between items-center bg-slate-900 p-4 rounded-3xl border border-slate-800 shadow-lg">
+                                    <button onClick={() => setActiveDay(prev => Math.max(1, prev - 1))} disabled={activeDay === 1} className="w-12 h-12 flex items-center justify-center bg-slate-800 rounded-full text-yellow-500 hover:bg-slate-700 disabled:opacity-30 transition-all text-xl">❮</button>
+                                    <div className="text-center">
+                                        <h3 className="font-bold text-2xl text-white">{activeDay}. Gün</h3>
+                                        <p className="text-yellow-500 text-sm font-semibold uppercase tracking-wider">{generatedSchedule.find(d => d.dayNum === activeDay)?.dayName} - {generatedSchedule.find(d => d.dayNum === activeDay)?.fullDate}</p>
+                                    </div>
+                                    <button onClick={() => setActiveDay(prev => Math.min(7, prev + 1))} disabled={activeDay === 7} className="w-12 h-12 flex items-center justify-center bg-slate-800 rounded-full text-yellow-500 hover:bg-slate-700 disabled:opacity-30 transition-all text-xl">❯</button>
+                                </div>
+
+                                {generatedSchedule.filter(day => day.dayNum === activeDay).map(day => (
+                                    <div key={day.dayNum} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-6 bg-slate-900/50 border border-slate-800 rounded-3xl shadow-xl">
+                                        {day.blocks.map((block) => {
+                                            const currentSubj = programData[`${block.id}_subject`] || block.defaultSubject;
+                                            const status = programData[`${block.id}_status`];
+                                            const delayValue = programData[`${block.id}_delay`] || 0;
+                                            return (
+                                                <div key={block.id} className={`bg-slate-950 border p-5 rounded-2xl flex flex-col gap-4 relative transition-transform hover:-translate-y-1 ${block.isTelafi ? 'border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.1)]' : 'border-slate-800 hover:border-slate-600'}`}>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className={`text-[10px] font-bold px-2 py-1 rounded border ${block.isTelafi ? 'text-purple-400 border-purple-500/30' : 'text-yellow-500 border-yellow-500/20'}`}>{block.slotName}</span>
+                                                        <span className="text-xs font-mono font-bold text-slate-400">{block.start}</span>
+                                                    </div>
+                                                    
+                                                    {!block.isTelafi && (
+                                                        <div className="flex items-center gap-3 bg-slate-900/50 p-2 rounded-xl border border-slate-800">
+                                                            <span className="text-[10px] text-slate-500 font-bold whitespace-nowrap">☕ {delayValue} dk</span>
+                                                            <input type="range" min="0" max="60" step="5" value={delayValue} onChange={e => updateProgress(block.id, 'delay', parseInt(e.target.value))} className="flex-1 accent-yellow-500" />
+                                                            <button onClick={() => saveToCloud(config, programData, subjects)} className="w-7 h-7 flex items-center justify-center bg-yellow-500 text-black rounded-lg hover:scale-110 active:scale-95 transition-all text-xs shadow-lg" title="Hızlı Kaydet">💾</button>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="relative">
+                                                        <select className="font-bold text-lg bg-slate-900 border border-slate-800 p-2 pr-8 rounded-xl text-white outline-none w-full focus:border-yellow-500 select-arrow" value={currentSubj} onChange={e => updateSubject(block.id, e.target.value)}>
+                                                            {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+                                                            {!subjects.includes(currentSubj) && <option value={currentSubj}>{currentSubj}</option>}
+                                                        </select>
+                                                    </div>
+                                                    
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => updateProgress(block.id, 'status', 'yaptim')} className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold transition-all ${status === 'yaptim' ? 'bg-green-600 text-white shadow-lg shadow-green-900/20' : 'bg-slate-900 text-slate-500 hover:bg-slate-800'}`}>✅ Yaptım</button>
+                                                        <button onClick={() => updateProgress(block.id, 'status', 'yapmadim')} className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold transition-all ${status === 'yapmadim' ? 'bg-red-600 text-white shadow-lg shadow-red-900/20' : 'bg-slate-900 text-slate-500 hover:bg-slate-800'}`}>❌ Yapmadım</button>
+                                                    </div>
+
+                                                    {status === 'yapmadim' && !block.isTelafi && !programData[`${block.id}_telafi`] && (
+                                                        <div className="bg-red-950/40 border border-red-900/50 p-2 rounded-xl text-[10px] text-red-200 slide-up">
+                                                            <p className="font-bold mb-2">Telafi ekleyelim mi?</p>
+                                                            <div className="flex gap-2">
+                                                                <button onClick={() => updateProgress(block.id, 'telafi', true)} className="bg-red-600 text-white px-2 py-1 rounded-lg flex-1 font-bold">Evet</button>
+                                                                <button onClick={() => updateProgress(block.id, 'status', 'pas')} className="bg-slate-800 text-slate-400 px-2 py-1 rounded-lg flex-1">Hayır</button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="grid grid-cols-3 gap-2">
+                                                        <input type="number" placeholder="D" className="bg-slate-900 border border-slate-800 p-2 rounded-xl text-center text-xs font-bold text-green-400 outline-none focus:border-green-500" value={programData[`${block.id}_D`] || ''} onChange={e => updateProgress(block.id, 'D', e.target.value)} />
+                                                        <input type="number" placeholder="Y" className="bg-slate-900 border border-slate-800 p-2 rounded-xl text-center text-xs font-bold text-red-400 outline-none focus:border-red-500" value={programData[`${block.id}_Y`] || ''} onChange={e => updateProgress(block.id, 'Y', e.target.value)} />
+                                                        <input type="number" placeholder="B" className="bg-slate-900 border border-slate-800 p-2 rounded-xl text-center text-xs font-bold text-slate-400 outline-none focus:border-slate-500" value={programData[`${block.id}_B`] || ''} onChange={e => updateProgress(block.id, 'B', e.target.value)} />
+                                                    </div>
+                                                    <textarea placeholder="Not..." className="bg-slate-900 border border-slate-800 p-2 rounded-xl text-xs w-full text-slate-300 outline-none h-12 resize-none custom-scrollbar" value={programData[`${block.id}_not`] || ''} onChange={e => updateProgress(block.id, 'not', e.target.value)}></textarea>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {activeTab === "calendar" && (
+                            <div className="overflow-x-auto pb-6 custom-scrollbar bg-slate-900/30 p-6 rounded-3xl border border-slate-800">
+                                <h3 className="text-2xl font-bold mb-6 text-center text-yellow-500 tracking-tight uppercase">Haftalık Çalışma Takvimi</h3>
+                                <div className="calendar-grid min-w-[1000px] shadow-2xl">
+                                    <div className="calendar-header">Saat / Blok</div>
+                                    {generatedSchedule.map(d => (
+                                        <div key={d.dayNum} className="calendar-header border-b-2 border-yellow-500/50">
+                                            <div className="text-[10px] text-slate-500">{d.fullDate}</div>
+                                            <div>{d.dayName}</div>
+                                        </div>
+                                    ))}
+                                    {Array.from({length: config.blocksPerDay + 2}).map((_, blockIdx) => (
+                                        <React.Fragment key={blockIdx}>
+                                            <div className="calendar-time-label flex-col gap-1 p-2"><span className="text-white text-center">{blockIdx+1}. Blok</span></div>
+                                            {generatedSchedule.map(day => {
+                                                const block = day.blocks[blockIdx];
+                                                if(!block) return <div key={`e_${day.dayNum}_${blockIdx}`} className="calendar-cell opacity-50"></div>;
+                                                const currentSubj = programData[`${block.id}_subject`] || block.defaultSubject;
+                                                const totalQ = (parseInt(programData[`${block.id}_D`])||0) + (parseInt(programData[`${block.id}_Y`])||0) + (parseInt(programData[`${block.id}_B`])||0);
+                                                const isDone = programData[`${block.id}_status`] === 'yaptim';
+                                                return (
+                                                    <div key={block.id} className={`calendar-cell ${block.isTelafi ? 'border-l-2 border-purple-500' : ''}`}>
+                                                        <div className="flex justify-between items-start">
+                                                            <span className={`text-xs font-bold truncate ${block.isTelafi ? 'text-purple-400' : 'text-yellow-500'}`}>{currentSubj}</span>
+                                                            {isDone && <span className="text-[10px] drop-shadow-md">✅</span>}
+                                                        </div>
+                                                        <span className="text-[9px] font-mono opacity-60 italic">{block.start}</span>
+                                                        {totalQ > 0 && <span className="mt-auto text-[10px] bg-green-900/30 text-green-400 px-2 py-1 rounded-md w-max font-bold border border-green-500/20">{totalQ} Soru</span>}
+                                                    </div>
+                                                );
+                                            })}
+                                        </React.Fragment>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dobby LGS - Profesyonel Eğitim Koçu</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600;700&display=swap');
+        
+        body { background-color: #020617; color: #f8fafc; margin: 0; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        .quote-font { font-family: 'Playfair Display', serif; }
+        
+        .fade-in { animation: fadeIn 0.8s ease-in forwards; }
+        .fade-out { animation: fadeOut 0.8s ease-out forwards; }
+        .slide-up { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .glow-effect { box-shadow: 0 0 30px rgba(234, 179, 8, 0.15); }
+        .glow-text { text-shadow: 0 0 15px rgba(234, 179, 8, 0.4); }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+            100% { transform: translateY(0px); }
+        }
+        .animate-float { animation: float 4s ease-in-out infinite; }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        
+        .calendar-grid { display: grid; grid-template-columns: 80px repeat(7, minmax(130px, 1fr)); gap: 1px; background-color: #1e293b; border: 1px solid #1e293b; border-radius: 16px; overflow: hidden; }
+        .calendar-header { background-color: #0f172a; padding: 15px 10px; text-align: center; font-weight: bold; font-size: 0.85rem; color: #cbd5e1; }
+        .calendar-cell { background-color: #020617; padding: 12px; min-height: 90px; display: flex; flex-direction: column; gap: 6px; transition: all 0.2s; }
+        .calendar-cell:hover { background-color: #0f172a; }
+        .calendar-time-label { background-color: #0f172a; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #94a3b8; font-weight: 600; border-right: 1px solid #1e293b; }
+        
+        .select-arrow { appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23eab308' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 10px center; background-size: 16px; padding-right: 30px; }
+        
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #eab308; cursor: pointer; margin-top: -6px; box-shadow: 0 0 5px rgba(234,179,8,0.5); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #334155; border-radius: 2px; }
+
+        .guide-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 30px;
+            border-width: 10px 10px 0;
+            border-style: solid;
+            border-color: #eab308 transparent transparent transparent;
+        }
     </style>
 </head>
 <body>
